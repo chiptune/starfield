@@ -14,6 +14,68 @@ const _c = e => document.createElement(String(e));
 const _a = (p, e) => p ? p.appendChild(e) : undefined;
 const _r = e => e ? e.parentNode.removeChild(e) : undefined;
 
+path = 'starfield';
+root = document.location.origin + '/' + path + '/';
+const url = new URL(document.location.href).searchParams;
+step = Number(url.get('step')) || 0;
+space = 256;
+distance = 256;
+depth = 0;
+stars = [];
+vars = [
+  ['_nb', 'number', 0, 4096, 8, 1280],
+  ['_s', 'size', 0.01, 1, 0.01, 0.5],
+  ['_w', 'space', 8, space * 2, 1, space],
+  ['_fp', 'far_p', 8, space * 2, 1, space],
+  ['_np', 'near_p', 1, space * 2, 1, 4],
+  ['_f', 'focale', 1, 1024, 1, space],
+  ['_m', 'motion', -64, 64, 1, 8],
+  ['_o', 'opacity', 0.01, 1, 0.01, 0.5],
+  ['_g', 'gradient', 2, 32, 0.1, 12],
+  ['_h', 'halo', 0.01, 0.5, 0.01, 0.12],
+  ['_dof', 'dof', 0.01, 1, 0.01, 0.1],
+  ['_cs', 'color', 0, 2, 0.01, 1],
+  ['_k', 'spike', 2, 16, 0.1, 6],
+  ['_t1', 'tunnel 1', 0, 128, 1, 36],
+  ['_t2', 'tunnel 2', 0, 64, 1, 12]
+];
+steps = [
+  ['intro', null, [9, 14, 21], [6]],
+  ['points', [0, 1, 2], [3, 4, 15], [20]],
+  ['depth', [3, 4], [6, 17], [1]],
+  ['focale', [5], [5, 8]],
+  ['color #1', null, [7, 8], [16]],
+  ['sorting', null, [4, 15, 16, 17, 18, 19, 20, 21, 22]],
+  ['motion', [6, 7], [4, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]],
+  ['gradient', [8, 9], [12, 13, 14, 15, 16, 17, 18, 19, 20]],
+  ['dof', [10], [11, 12, 13, 14]],
+  ['blending', null, [1, 28, 29, 30, 31, 32, 33]],
+  ['color #2', [11], [9, 10, 24, 25, 31, 32, 33, 34, 46]],
+  ['spikes', [12], [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50]],
+  ['tunnel', [13, 14], [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]]
+];
+ox = 0;
+oy = 0;
+oz = 1e12;
+vx = 0;
+vy = 0;
+px = 0;
+py = 0;
+mx = 0;
+my = 0;
+pause = false;
+debug = false;
+drag = false;
+drago = false;
+star_n = 0;
+time = performance.now();
+delta = performance.now();
+rti = 0;
+rtc = 128;
+rth = 56;
+rtmax = 120;
+rt = new Float32Array(rtc);
+
 const favicon = () => {
   const canvas =  _c('canvas');
   canvas.width = 32;
@@ -101,44 +163,7 @@ function mousewheel(e) {
 }
 
 const init = () => {
-  step = 0;
-  space = 256;
-  distance = 256;
-  depth = 0;
-  stars = [];
-  vars = [
-    ['_nb', 'number', 0, 4096, 8, 1280],
-    ['_s', 'size', 0.01, 1, 0.01, 0.5],
-    ['_w', 'space', 8, space * 2, 1, space],
-    ['_fp', 'far_p', 8, space * 2, 1, space],
-    ['_np', 'near_p', 1, space * 2, 1, 4],
-    ['_f', 'focale', 1, 1024, 1, space],
-    ['_m', 'motion', -64, 64, 1, 8],
-    ['_o', 'opacity', 0.01, 1, 0.01, 0.5],
-    ['_g', 'gradient', 2, 32, 0.1, 12],
-    ['_h', 'halo', 0.01, 0.5, 0.01, 0.12],
-    ['_dof', 'dof', 0.01, 1, 0.01, 0.1],
-    ['_cs', 'color', 0, 2, 0.01, 1],
-    ['_k', 'spike', 2, 16, 0.1, 6],
-    ['_t1', 'tunnel 1', 0, 128, 1, 36],
-    ['_t2', 'tunnel 2', 0, 64, 1, 12]
-  ];
   reset();
-  steps = [
-    ['intro', null, [9, 14, 21], [6]],
-    ['points', [0, 1, 2], [3, 4, 15], [20]],
-    ['depth', [3, 4], [6, 17], [1]],
-    ['focale', [5], [5, 8]],
-    ['color #1', null, [7, 8], [16]],
-    ['sorting', null, [4, 15, 16, 17, 18, 19, 20, 21, 22]],
-    ['motion', [6, 7], [4, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]],
-    ['gradient', [8, 9], [12, 13, 14, 15, 16, 17, 18, 19, 20]],
-    ['dof', [10], [11, 12, 13, 14]],
-    ['blending', null, [1, 28, 29, 30, 31, 32, 33]],
-    ['color #2', [11], [9, 10, 24, 25, 31, 32, 33, 34, 46]],
-    ['spikes', [12], [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50]],
-    ['tunnel', [13, 14], [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]]
-  ];
   steps.forEach((v, i) => {
     const btn = _c('div');
     btn.id = 'step' + i + '_btn';
@@ -148,33 +173,12 @@ const init = () => {
     _a(_i('steps'), btn);
     btn.addEventListener('click', run, false);
   });
-  ox = 0;
-  oy = 0;
-  oz = 1e12;
-  vx = 0;
-  vy = 0;
-  px = 0;
-  py = 0;
-  mx = 0;
-  my = 0;
   const sf = _i('starfield');
   sf.addEventListener('mousemove', mousemove);
   sf.addEventListener('mousedown', mousedown);
   sf.addEventListener('mouseup', mouseup);
   sf.addEventListener('mousewheel', mousewheel);
   sf.addEventListener('mousewheel', mousewheel);
-  pause = false;
-  debug = false;
-  drag = false;
-  drago = false;
-  star_n = 0;
-  time = performance.now();
-  delta = performance.now();
-  rti = 0;
-  rtc = 128;
-  rth = 56;
-  rtmax = 120;
-  rt = new Float32Array(rtc);
   resize();
   favicon();
 };
@@ -201,8 +205,11 @@ const resize = e => {
   const sf = _i('starfield');
   const code = _i('code');
   const steps = _i('steps');
-  w = innerWidth - 32 - code.offsetWidth - steps.offsetWidth;
-  h = innerHeight - 26 - _i('header').offsetHeight - 20 * vars.length;
+  let style = getComputedStyle(document.body);
+  const padding = parseInt(style.getPropertyValue('--padding'));
+  const border = parseInt(style.getPropertyValue('--border'));
+  w = innerWidth - padding * 4 - border * 2 - code.offsetWidth - steps.offsetWidth;
+  h = innerHeight - padding * 4 - border * 2 - _i('header').offsetHeight - 18 * vars.length;
   ox = w / 2;
   oy = h / 2;
   dpr = window.devicePixelRatio;
@@ -218,7 +225,6 @@ const resize = e => {
   ctx.translate(ox, oy);
   ctx.lineCap = 'round';
   content.style.width = w + 'px';
-  code.style.height = (h + 20 * vars.length) + 'px';
   _i('step'+ step + '_btn').click(); // run code
 };
 
@@ -281,6 +287,9 @@ const run = e => {
   }
   ctx.globalCompositeOperation = 'source-over';
   update();
+  const title = 'starfield' + (step > 0 ? ' > step' + step + ': ' + steps[step][0] : '');
+  history.pushState({data:''}, title, root + (step > 0 ? '?step=' + step : ''));
+  document.title = title;
 };
 
 const update = e => {
@@ -584,10 +593,12 @@ debug_draw = () => {
     ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
     ctx.stroke();
     ctx.setLineDash([]);
-    x = Math.round(ox - w / 2 + (drago ? px : 0));
-    y = Math.round(oy - h / 2 + (drago ? py : 0));
-    ctx.fillText(x + '×' + y, x0, y0 + 16);
   }
+  /* origin */
+  x = Math.round(ox - w / 2 + (drago ? px : 0));
+  y = Math.round(oy - h / 2 + (drago ? py : 0));
+  ctx.fillText(x + '×' + y, x0, y0 + 16);
+  /* center */
   if (step === 12) {
     ctx.beginPath();
     ctx.arc(x1 + s1 / 2, y1 + s1 / 2, _w / 8 * r1, 0, CIRCLE);
@@ -599,7 +610,10 @@ debug_draw = () => {
     ctx.stroke();
     ctx.setLineDash([]);
   }
+  /* depth */
   if (step > 7) {
+    x = drag ? px : 0;
+    y = drag ? py : 0;
     r1 = _f / (_np + _dof * depth);
     x1 = (vx + x - _w / 2) * r1;
     y1 = (vy + y - _w / 2) * r1;
@@ -665,8 +679,10 @@ debug_draw = () => {
 
 <script type="application/javascript" id="step0">
 step0_draw = () => {
+  translate(); // REM
   ctx.fillStyle = '#000';
-  ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.fillRect(-x, -y, w, h); // REM
+  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fff';
   ctx.font = 'normal 20px/100% sans-serif';
@@ -708,8 +724,8 @@ step1_draw = () => {
   for (let i = 0; i < _nb; i++) {
     [x, y] = stars[i];
     ctx.beginPath();
-    x += (drago ? -px : 0);
-    y += (drago ? -py : 0);
+    x += (drago ? -px : 0); // REM
+    y += (drago ? -py : 0); // REM
     ctx.arc(px + x, py + y, _s * 2, 0, CIRCLE); // REM
     //ctx.arc(x, y, _s * 2, 0, CIRCLE); // NREM
     ctx.fill();
@@ -733,7 +749,6 @@ step2_init = () => {
     stars[i][1] = vy + (lcg() - 0.5) * _w;
     stars[i][2] = _np + depth / _nb * i;
   }
-  debug_draw(); // REM
 };
 
 step2_draw = () => {
@@ -1185,16 +1200,14 @@ step12_draw = () => {
 
 <body>
   <div id="header">
-    <img id="datadog" src="datadog.svg">
     <div id="title">
       starfield<img id="cute_star" src="cute_star.png"/><br>
-      <div id="subtitle">datadog frontend summit 2023</div>
+      <div id="subtitle">an interactive tutorial</div>
     </div>
-    <img id="dataviz" src="dataviz.svg">
     <div id="credits">
       christophe resigne<br>
-      dataviz maps<br>
-      <div id="version">v0.9.3</div>
+      <a href="https://github.com/chiptune/starfield">github</a><br>
+      <div id="version">v0.9.4</div>
     </div>
   </div>
   <div id="content"><canvas id="starfield"></canvas></div>
