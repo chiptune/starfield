@@ -3,9 +3,9 @@
 
 <head>
   <title>starfield</title>
-  <meta charset="utf-8"/>
+  <meta charset="utf-8" />
   <meta name="robots" content="follow index archive">
-  <link rel="stylesheet" type="text/css" href="starfield.css"/>
+  <link rel="stylesheet" type="text/css" href="starfield.css" />
 </head>
 
 <script type="application/javascript">
@@ -19,7 +19,7 @@ root = document.location.origin + '/' + path + '/';
 const url = new URL(document.location.href).searchParams;
 step = Number(url.get('step')) || 0;
 space = 256;
-distance = 256;
+distance = 412;
 depth = 0;
 stars = [];
 vars = [
@@ -34,7 +34,7 @@ vars = [
   ['_g', 'gradient', 2, 32, 0.1, 12],
   ['_h', 'halo', 0.01, 0.5, 0.01, 0.12],
   ['_dof', 'dof', 0.01, 1, 0.01, 0.1],
-  ['_cs', 'color', 0, 2, 0.01, 1],
+  ['_cs', 'color', 0, 1, 0.01, 0.75],
   ['_k', 'spike', 2, 16, 0.1, 6],
   ['_t1', 'tunnel 1', 0, 128, 1, 36],
   ['_t2', 'tunnel 2', 0, 64, 1, 12]
@@ -57,14 +57,14 @@ steps = [
 ox = 0;
 oy = 0;
 oz = 1e12;
-vx = 0;
-vy = 0;
+vx = Number(url.get('x'));
+vy = Number(url.get('y'));
 px = 0;
 py = 0;
 mx = 0;
 my = 0;
-pause = false;
-debug = false;
+pause = Boolean(url.get('pause'));
+debug = Boolean(url.get('debug'));
 drag = false;
 drago = false;
 star_n = 0;
@@ -77,7 +77,7 @@ rtmax = 120;
 rt = new Float32Array(rtc);
 
 const favicon = () => {
-  const canvas =  _c('canvas');
+  const canvas = _c('canvas');
   canvas.width = 32;
   canvas.height = 32;
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -133,15 +133,18 @@ function mouseup(e) {
     window.vx += window.px;
     window.vy += window.py;
     window.drag = false;
+    set_url();
   } else if (window.drago) {
     window.ox += window.px;
     window.oy += window.py;
     window.drago = false;
+    set_url();
   }
   window.px = 0;
   window.py = 0;
   _i('starfield').style.cursor = 'crosshair';
   if (window.pause) {
+    single_frame();
     start();
   }
 }
@@ -157,9 +160,9 @@ function mousemove(e) {
 }
 
 function mousewheel(e) {
-    e.preventDefault();
-    window.distance -= e.deltaY / 2**12 * window._f;
-    start();
+  e.preventDefault();
+  window.distance -= e.deltaY / 2 ** 12 * window._f;
+  start();
 }
 
 const init = () => {
@@ -208,10 +211,10 @@ const resize = e => {
   let style = getComputedStyle(document.body);
   const padding = parseInt(style.getPropertyValue('--padding'));
   const border = parseInt(style.getPropertyValue('--border'));
-  w = innerWidth - padding * 4 - border * 2 - code.offsetWidth - steps.offsetWidth;
+  w = innerWidth - padding * 4 - border * 4 - code.offsetWidth - steps.offsetWidth;
   h = innerHeight - padding * 4 - border * 2 - _i('header').offsetHeight - 18 * vars.length;
-  ox = w / 2;
-  oy = h / 2;
+  ox = w / 2 + Number(url.get('ox'));
+  oy = h / 2 + Number(url.get('oy'));
   dpr = window.devicePixelRatio;
   sf.width = w * dpr;
   sf.height = h * dpr;
@@ -225,17 +228,18 @@ const resize = e => {
   ctx.translate(ox, oy);
   ctx.lineCap = 'round';
   content.style.width = w + 'px';
-  _i('step'+ step + '_btn').click(); // run code
+  _i('step' + step + '_btn').click(); // run code
 };
 
 const run = e => {
   if (!e.srcElement) {
     return;
   }
+  set_url();
   stop();
   for (let i = 0; i <= vars.length; i++) {
-      _r(_i('slider' + i));
-      _r(_i('list' + i));
+    _r(_i('slider' + i));
+    _r(_i('list' + i));
   }
   let btn = _i('step' + step + '_btn');
   if (btn) {
@@ -253,7 +257,7 @@ const run = e => {
     const v = steps[i][1];
     if (!v) { continue; }
     for (let j = 0; j < v.length; j++) {
-      const [ name, text, min, max, step ] = vars[v[j]];
+      const [name, text, min, max, step] = vars[v[j]];
       const slider = _c('form');
       slider.id = 'slider' + n;
       slider.style.width = w + 'px';
@@ -287,9 +291,23 @@ const run = e => {
   }
   ctx.globalCompositeOperation = 'source-over';
   update();
+  single_frame();
+};
+
+const set_url = e => {
   const title = 'starfield' + (step > 0 ? ' > step' + step + ': ' + steps[step][0] : '');
-  history.pushState({data:''}, title, root + (step > 0 ? '?step=' + step : ''));
   document.title = title;
+  let params = [
+    step > 0 ? 'step=' + step : null,
+    pause ? 'pause=true' : null,
+    debug ? 'debug=true' : null,
+    vx !== 0 ? 'x=' + vx : null,
+    vy !== 0 ? 'y=' + vy : null,
+    ox !== w / 2 ? 'ox=' + (ox - w / 2) : null,
+    oy !== h / 2 ? 'oy=' + (oy - h / 2) : null,
+  ];
+  params = params.filter(p => p !== null);
+  history.pushState({ data: '' }, title, root + (params.length > 0 ? '?' : '') + params.join('&'));
 };
 
 const update = e => {
@@ -310,13 +328,13 @@ const update = e => {
 };
 
 const range_color = range => {
-    const p = (range.value - range.min) / (range.max - range.min);
-    const r = 64;
-    const g = 80;
-    const b = 128;
-    const c1 = `rgb(${r},${g},${b})`;
-    const c2 = `rgb(${r + p * 64},${g - p * 32},${b - p * 64})`;
-    range.style.backgroundImage = `linear-gradient(90deg,${c1} 0%,${c2} ${p * 100}%,#444 ${p * 100}%)`;
+  const p = (range.value - range.min) / (range.max - range.min);
+  const r = 64;
+  const g = 80;
+  const b = 128;
+  const c1 = `rgb(${r},${g},${b})`;
+  const c2 = `rgb(${r + p * 64},${g - p * 32},${b - p * 64})`;
+  range.style.backgroundImage = `linear-gradient(90deg,${c1} 0%,${c2} ${p * 100}%,#444 ${p * 100}%)`;
 };
 
 const tick = fn => {
@@ -326,6 +344,14 @@ const tick = fn => {
   }
   rt[rti] = Math.min(1000 / (time - delta), rtmax);
   rti = (rti + 1) % rtc;
+};
+
+const single_frame = () => {
+  if (!pause) { return; }
+  const opacity = _o;
+  _o = 1;
+  window['step' + window.step + '_draw']();
+  _o = opacity;
 };
 
 const start = () => {
@@ -420,12 +446,14 @@ const keydown = e => {
   shift = e.shiftKey;
   key = e.key;
   let id;
-  switch(e.key)
-    {
+  switch (e.key) {
     case ' ':
+    case 'p':
     case 'Enter':
       pause = !pause;
+      set_url();
       time = performance.now();
+      single_frame();
       delta = time;
       start();
       break;
@@ -439,14 +467,18 @@ const keydown = e => {
       break;
     case 'ArrowLeft':
       star_n = (star_n + _nb - 1) % _nb;
+      single_frame();
       start();
       break;
     case 'ArrowRight':
       star_n = (star_n + 1) % _nb;
+      single_frame();
       start();
       break;
     case 'Escape':
       debug = !debug;
+      set_url();
+      single_frame();
       start();
       break;
     case 'c':
@@ -467,7 +499,7 @@ const keydown = e => {
       step12_init();
       start();
       break;
-    }
+  }
   //console.log(e.key);
 };
 
@@ -521,6 +553,10 @@ debug_draw = () => {
   x = drag ? px : 0;
   y = drag ? py : 0;
   if (step === 1) {
+    x0 = drago ? px : vx;
+    y0 = drago ? py : vy;
+    x0 = (vx + x);
+    y0 = (vy + y);
     x1 = vx + x - _w / 2 - m;
     y1 = vy + y - _w / 2 - m;
     s1 = _w + m * 2;
@@ -549,12 +585,12 @@ debug_draw = () => {
   if (step === 0) {
     ctx.fillText('HEY!', 48, -40);
   } else if (step === 1) {
-    ctx.strokeRect(x1, y1 , s1, s1);
+    ctx.strokeRect(x1, y1, s1, s1);
     ctx.fillText(_w + '×' + _w, x1 + s1 / 2, y1 - 5);
   } else {
     ctx.beginPath();
-    ctx.rect(x1, y1 , s1, s1);
-    ctx.rect(x2, y2 , s2, s2);
+    ctx.rect(x1, y1, s1, s1);
+    ctx.rect(x2, y2, s2, s2);
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.moveTo(x1 + s1, y1);
@@ -705,6 +741,7 @@ step0_draw = () => {
 // # SOURCE #
 // github.com/chiptune/starfield
 </script>
+
 <script type="application/javascript" id="step1">
 step1_init = () => {
   window.seed = (1 + Math.sqrt(5)) / 2; // REM
@@ -787,7 +824,7 @@ step3_draw = () => {
     ctx.fill();
   }
   delta = time; // REM
-  time = performance.now(); // REM 
+  time = performance.now(); // REM
   debug_draw(); // REM
   tick(step3_draw); // REM
 };
@@ -811,7 +848,7 @@ step4_draw = () => {
     ctx.fill();
   }
   delta = time; // REM
-  time = performance.now(); // REM 
+  time = performance.now(); // REM
   debug_draw(); // REM
   tick(step4_draw); // REM
 };
@@ -835,7 +872,7 @@ step5_draw = () => {
     ctx.fill();
   }
   delta = time; // REM
-  time = performance.now(); // REM 
+  time = performance.now(); // REM
   debug_draw(); // REM
   tick(step5_draw); // REM
 };
@@ -1201,7 +1238,7 @@ step12_draw = () => {
 <body>
   <div id="header">
     <div id="title">
-      starfield<img id="cute_star" src="cute_star.png"/><br>
+      starfield<img id="cute_star" src="cute_star.png" /><br>
       <div id="subtitle">an interactive tutorial</div>
     </div>
     <div id="credits">
