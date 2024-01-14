@@ -1,2 +1,4 @@
+*.DS_Store
+*.code-workspace
 *.sh
-screenshot.png
+img/screenshot.png
