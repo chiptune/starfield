@@ -9,1246 +9,1273 @@
 </head>
 
 <script type="application/javascript">
-const _i = id => document.getElementById(String(id));
-const _c = e => document.createElement(String(e));
-const _a = (p, e) => p ? p.appendChild(e) : undefined;
-const _r = e => e ? e.parentNode.removeChild(e) : undefined;
+  const _i = id => document.getElementById(String(id));
+  const _c = e => document.createElement(String(e));
+  const _a = (p, e) => p ? p.appendChild(e) : undefined;
+  const _r = e => e ? e.parentNode.removeChild(e) : undefined;
 
-path = 'starfield';
-root = document.location.origin + '/' + path + '/';
-const url = new URL(document.location.href).searchParams;
-step = Number(url.get('step')) || 0;
-space = 256;
-distance = 412;
-depth = 0;
-stars = [];
-vars = [
-  ['_nb', 'number', 0, 4096, 8, 1280],
-  ['_s', 'size', 0.01, 1, 0.01, 0.5],
-  ['_w', 'space', 8, space * 2, 1, space],
-  ['_fp', 'far_p', 8, space * 2, 1, space],
-  ['_np', 'near_p', 1, space * 2, 1, 4],
-  ['_f', 'focale', 1, 1024, 1, space],
-  ['_m', 'motion', -64, 64, 1, 8],
-  ['_o', 'opacity', 0.01, 1, 0.01, 0.5],
-  ['_g', 'gradient', 2, 32, 0.1, 12],
-  ['_h', 'halo', 0.01, 0.5, 0.01, 0.12],
-  ['_dof', 'dof', 0.01, 1, 0.01, 0.1],
-  ['_cs', 'color', 0, 1, 0.01, 0.75],
-  ['_k', 'spike', 2, 16, 0.1, 6],
-  ['_t1', 'tunnel 1', 0, 128, 1, 36],
-  ['_t2', 'tunnel 2', 0, 64, 1, 12]
-];
-steps = [
-  ['intro', null, [9, 14, 21], [6]],
-  ['points', [0, 1, 2], [3, 4, 15], [20]],
-  ['depth', [3, 4], [6, 17], [1]],
-  ['focale', [5], [5, 8]],
-  ['color #1', null, [7, 8], [16]],
-  ['sorting', null, [4, 15, 16, 17, 18, 19, 20, 21, 22]],
-  ['motion', [6, 7], [4, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]],
-  ['gradient', [8, 9], [12, 13, 14, 15, 16, 17, 18, 19, 20]],
-  ['dof', [10], [11, 12, 13, 14]],
-  ['blending', null, [1, 28, 29, 30, 31, 32, 33]],
-  ['color #2', [11], [9, 10, 24, 25, 31, 32, 33, 34, 46]],
-  ['spikes', [12], [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50]],
-  ['tunnel', [13, 14], [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]]
-];
-ox = 0;
-oy = 0;
-oz = 1e12;
-vx = Number(url.get('x'));
-vy = Number(url.get('y'));
-px = 0;
-py = 0;
-mx = 0;
-my = 0;
-pause = Boolean(url.get('pause'));
-debug = Boolean(url.get('debug'));
-drag = false;
-drago = false;
-star_n = 0;
-time = performance.now();
-delta = performance.now();
-rti = 0;
-rtc = 128;
-rth = 56;
-rtmax = 120;
-rt = new Float32Array(rtc);
+  path = 'starfield';
+  root = document.location.origin + '/' + path + '/';
+  const url = new URL(document.location.href).searchParams;
+  step = Number(url.get('step')) || 0;
+  space = 256;
+  distance = Number(url.get('distance')) || 232;
+  depth = 0;
+  stars = [];
+  vars = [
+    ['_nb', 'number', 0, 4096, 8, 1024],
+    ['_s', 'size', 0.01, 1, 0.01, 0.5],
+    ['_w', 'space', 8, space * 2, 1, space],
+    ['_fp', 'far_p', 8, space * 2, 1, space],
+    ['_np', 'near_p', 1, space * 2, 1, 4],
+    ['_f', 'focale', 1, 1024, 1, space],
+    ['_cl', 'color 1', 0.01, 6, 0.01, 3],
+    ['_m', 'motion', -64, 64, 1, 8],
+    ['_o', 'opacity', 0.01, 1, 0.01, 0.5],
+    ['_g', 'gradient', 1, 16, 0.1, 12],
+    ['_h', 'halo', 0.01, 0.5, 0.01, 0.1],
+    ['_dof', 'dof', 0.01, 1, 0.01, 0.15],
+    ['_cs', 'color 2', 0, 1, 0.01, 0.75],
+    ['_k', 'spike', 2, 16, 0.1, 6],
+    ['_t1', 'tunnel 1', 0, 128, 1, 36],
+    ['_t2', 'tunnel 2', 0, 64, 1, 12]
+  ];
+  steps = [
+    ['intro', null, [9, 14, 21], [6]],
+    ['points', [0, 1, 2], [3, 4, 15], [20]],
+    ['depth', [3, 4], [6, 17], [1]],
+    ['focale', [5], [5, 8]],
+    ['color #1', [6], [7, 8], [16]],
+    ['sorting', null, [4, 15, 16, 17, 18, 19, 20, 21, 22]],
+    ['motion', [7, 8], [4, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]],
+    ['gradient', [9, 10], [11, 12, 13, 14, 15, 16, 17, 18, 19]],
+    ['dof', [11], [10, 11, 12, 13]],
+    ['blending', null, [1, 27, 28, 29, 30, 31, 32]],
+    ['color #2', [12], [9, 10, 23, 24, 30, 31, 32, 33, 45]],
+    ['spikes', [13], [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]],
+    ['tunnel', [14, 15], [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]]
+  ];
+  ox = 0;
+  oy = 0;
+  oz = 1e12;
+  vx = Number(url.get('x'));
+  vy = Number(url.get('y'));
+  px = 0;
+  py = 0;
+  mx = 0;
+  my = 0;
+  pause = Boolean(url.get('pause'));
+  debug = Boolean(url.get('debug'));
+  drag = false;
+  drago = false;
+  star_n = 0;
+  time = performance.now();
+  delta = performance.now();
+  rti = 0;
+  rtc = 128;
+  rth = 56;
+  rtmax = 120;
+  rt = new Float32Array(rtc);
 
-const favicon = () => {
-  const canvas = _c('canvas');
-  canvas.width = 32;
-  canvas.height = 32;
-  const ctx = canvas.getContext('2d', { alpha: false });
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, 32, 32);
-  for (let y = 0; y < 32; y++) {
-    const x = Math.round(Math.random() * 31);
-    const c = Math.round(Math.random() * 255).toString(16);
-    ctx.fillStyle = '#' + c + c + c;
-    ctx.fillRect(x - 1, y - 1, 2, 2);
+  const favicon = () => {
+    const canvas = _c('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 32, 32);
+    for (let y = 0; y < 32; y++) {
+      const x = Math.round(Math.random() * 31);
+      const c = Math.round(Math.random() * 255.999).toString(16);
+      ctx.fillStyle = '#' + c + c + c;
+      ctx.fillRect(x - 1, y - 1, 2, 2);
+    }
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#555';
+    ctx.rect(1, 1, 30, 30);
+    ctx.stroke();
+    const icon = _c('link');
+    icon.rel = 'icon';
+    icon.type = 'image/png';
+    icon.href = canvas.toDataURL();
+    _a(document.head, icon);
+  };
+
+  const lcg = () => {
+    const LCG_MUL = 8121; // multiplier
+    const LCG_INC = 28411; // increment
+    const LCG_MOD = 134456; // modulus (2 ** 3 * 7 ** 5)
+    seed = (LCG_MUL * seed + LCG_INC) % LCG_MOD;
+    return seed / LCG_MOD;
+  };
+
+  function mousedown(e) {
+    window.mx = e.offsetX - sf.offsetLeft - sf.width / 2;
+    window.my = e.offsetY - sf.offsetTop - sf.height / 2;
+    if (!window.shift) {
+      window.drag = true;
+    } else {
+      window.drago = true;
+    }
+    sf.style.cursor = 'grab';
+    if (window.pause) {
+      start();
+    }
   }
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#555';
-  ctx.rect(1, 1, 30, 30);
-  ctx.stroke();
-  const icon = _c('link');
-  icon.rel = 'icon';
-  icon.type = 'image/png';
-  icon.href = canvas.toDataURL();
-  _a(document.head, icon);
-};
 
-const lcg = () => {
-  const LCG_MUL = 8121; // multiplier
-  const LCG_INC = 28411; // increment
-  const LCG_MOD = 134456; // modulus (2 ** 3 * 7 ** 5)
-  seed = (LCG_MUL * seed + LCG_INC) % LCG_MOD;
-  return seed / LCG_MOD;
-};
-
-function mousedown(e) {
-  window.mx = e.offsetX - this.width / 2;
-  window.my = e.offsetY - this.height / 2;
-  if (!window.shift) {
-    window.drag = true;
-  } else {
-    window.drago = true;
+  function mouseup() {
+    window.mx = 0;
+    window.my = 0;
+    if (window.drag) {
+      for (let i = 0; i < window.stars.length; i++) {
+        window.stars[i][0] += window.px;
+        window.stars[i][1] += window.py;
+      }
+      window.vx += window.px;
+      window.vy += window.py;
+      window.drag = false;
+    } else if (window.drago) {
+      window.ox += window.px;
+      window.oy += window.py;
+      window.drago = false;
+    }
+    window.px = 0;
+    window.py = 0;
+    _i('starfield').style.cursor = 'crosshair';
+    if (window.pause) {
+      single_frame();
+      start();
+    }
+    set_url();
   }
-  _i('starfield').style.cursor = 'grab';
-  if (window.pause) {
+
+  function mousemove(e) {
+    x = (e.offsetX - window.mx) - sf.offsetLeft - sf.width / 2;
+    y = (e.offsetY - window.my) - sf.offsetTop - sf.height / 2;
+    if (window.drag || window.drago) {
+      window.px = x;
+      window.py = y;
+      start();
+    }
+  }
+
+  function mousewheel(e) {
+    e.preventDefault();
+    window.distance -= e.deltaY / 2 ** 12 * window._f;
+    window.distance = window.distance % (window.depth * 2);
     start();
   }
-}
 
-function mouseup(e) {
-  window.mx = 0;
-  window.my = 0;
-  if (window.drag) {
-    for (let i = 0; i < window.stars.length; i++) {
-      window.stars[i][0] += window.px;
-      window.stars[i][1] += window.py;
+  const init = () => {
+    favicon();
+    dpr = window.devicePixelRatio;
+    sf = _i('starfield');
+    ctx = sf.getContext('2d', { alpha: false });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.lineCap = 'round';
+    vars.forEach(v => {
+      window[v[0]] = Number(url.get(v[0]) || v[5]);
+    });
+    _i('motion').addEventListener('change', () => { set_pause(!pause); });
+    _i('debug').addEventListener('change', () => { set_debug(!debug); });
+    steps.forEach((v, i) => {
+      const btn = _c('input');
+      btn.type = 'button';
+      btn.id = `step${i}_btn`;
+      btn.className = 'step';
+      btn.value = `step${i}: ${v[0]}`;
+      _a(_i('steps'), btn);
+      btn.addEventListener('click', () => { run(i); });
+    });
+    addEventListener('resize', resize);
+    addEventListener('keydown', keydown);
+    addEventListener('keyup', keyup);
+    addEventListener('drop', () => false);
+    addEventListener('mousemove', mousemove);
+    sf.addEventListener('mousedown', mousedown);
+    addEventListener('mouseup', mouseup);
+    sf.addEventListener('mousewheel', mousewheel);
+    step12_init();
+    resize();
+    set_pause(pause);
+    set_debug(debug);
+    run(step);
+  };
+
+  const reset = () => {
+    let range = document.getElementsByTagName('input');
+    vars.forEach((v, i) => {
+      window[v[0]] = v[5];
+      for (let i = 0; i < range.length; i++) {
+        if (range[i].variable === v[0]) {
+          range[i].value = v[5];
+          const value = _i(`value${range[i].n}`);
+          if (value) {
+            value.textContent = range[i].value;
+          }
+          range_color(range[i]);
+          break;
+        }
+      }
+    });
+  };
+
+  const resize = () => {
+    const menu = _i('menu');
+    const code = _i('code');
+    let style = getComputedStyle(document.body);
+    const padding = parseInt(style.getPropertyValue('--padding'));
+    const margin = parseInt(style.getPropertyValue('--margin'));
+    const border = parseInt(style.getPropertyValue('--border'));
+    const var_h = parseInt(style.getPropertyValue('--slider-height'));
+    const var_m = parseInt(style.getPropertyValue('--slider-margin'));
+    w = innerWidth - padding * 4 - border * 2 - code.offsetWidth - menu.offsetWidth;
+    h = innerHeight - padding * 4 - border * 2 - _i('header').offsetHeight;
+    h -= var_h * vars.length + var_m * (vars.length - 1);
+    _i('content').style.width = w + 'px';
+    ox = w / 2 + Number(url.get('ox'));
+    oy = h / 2 + Number(url.get('oy'));
+    sf.width = w * dpr;
+    sf.height = h * dpr;
+    sf.style.width = w + 'px';
+    sf.style.height = h + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.translate(ox, oy);
+    single_frame();
+  };
+
+  const run = id => {
+    stop();
+    for (let i = 0; i <= vars.length; i++) {
+      _r(_i('slider' + i));
+      _r(_i('list' + i));
     }
-    window.vx += window.px;
-    window.vy += window.py;
-    window.drag = false;
+    let btn = _i(`step${step}_btn`);
+    if (btn) {
+      btn.disabled = false;
+    }
+    step = parseInt(id || 0);
+    btn = _i(`step${step}_btn`);
+    if (!btn) {
+      return;
+    }
+    btn.disabled = true;
+    const content = _i('content');
+    let n = 0;
+    for (let i = 0; i <= step; i++) {
+      const v = steps[i][1];
+      if (!v) { continue; }
+      for (let j = 0; j < v.length; j++) {
+        const [name, text, min, max, step] = vars[v[j]];
+        const slider = _c('form');
+        slider.id = 'slider' + n;
+        slider.className = 'slider';
+        _a(content, slider);
+        const label = _c('label');
+        label.id = 'label' + n;
+        label.textContent = text;
+        label.style.float = 'left';
+        _a(slider, label);
+        const range = _c('input');
+        range.type = 'range';
+        range.id = 'range' + n;
+        range.n = n;
+        range.variable = name;
+        range.min = min;
+        range.max = max;
+        range.step = step;
+        range.addEventListener('input', update);
+        _a(slider, range);
+        range.value = window[range.variable];
+        range_color(range);
+        const value = _c('output');
+        value.id = 'value' + n;
+        value.textContent = range.value;
+        value.className = 'val var' + n;
+        _a(slider, value);
+        n++;
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
     set_url();
-  } else if (window.drago) {
-    window.ox += window.px;
-    window.oy += window.py;
-    window.drago = false;
+    update();
+    single_frame();
+  };
+
+  const set_url = e => {
+    const title = 'starfield' + (step > 0 ? ` > step${step}: ${steps[step][0]}` : '');
+    document.title = title;
+    let params = [
+      step > 0 ? 'step=' + step : null,
+      _nb !== vars[0][5] ? '_nb=' + _nb : null,
+      vx !== 0 ? 'x=' + vx : null,
+      vy !== 0 ? 'y=' + vy : null,
+      ox !== w / 2 ? 'ox=' + (ox - w / 2) : null,
+      oy !== h / 2 ? 'oy=' + (oy - h / 2) : null,
+      distance !== 232 ? 'distance=' + Math.round(distance) : null,
+      pause ? 'pause=true' : null,
+      debug ? 'debug=true' : null,
+    ];
+    params = params.filter(p => p !== null && Number(p) !== NaN);
+    history.pushState({ data: '' }, title, root + (params.length > 0 ? '?' : '') + params.join('&'));
+  };
+
+  const update = e => {
+    stop();
+    const v = steps[step][1];
+    const range = e?.srcElement || _i('range' + (v ? v[0] : 2));
+    if (range) {
+      window[range.variable] = Number(range.value);
+      const value = _i('value' + range.n);
+      if (value) {
+        value.textContent = range.value;
+      }
+      range_color(range);
+      step12_init();
+    }
+    code2text();
+    start();
+  };
+
+  const range_color = range => {
+    const p = (range.value - range.min) / (range.max - range.min);
+    const r = 64;
+    const g = 80;
+    const b = 128;
+    const c1 = `rgb(${r},${g},${b})`;
+    const c2 = `rgb(${r + p * 64},${g - p * 32},${b - p * 64})`;
+    range.style.backgroundImage = `linear-gradient(90deg,${c1} 0%,${c2} ${p * 100}%,#444 ${p * 100}%)`;
+  };
+
+  const tick = fn => {
+    stop();
+    if (step > 5 && (!window.pause || window.drag || window.drago)) {
+      window.rid = requestAnimationFrame(fn);
+    }
+    rt[rti] = Math.min(1000 / (time - delta), rtmax);
+    rti = (rti + 1) % rtc;
+  };
+
+  const single_frame = () => {
+    if (!pause) { return; }
+    const opacity = _o;
+    _o = 1;
+    window[`step${window.step}_draw`]();
+    _o = opacity;
+  };
+
+  const start = () => {
+    stop();
+    const fn = window[`step${window.step}_draw`];
+    window.rid = requestAnimationFrame(fn);
+  };
+
+  const stop = () => {
+    cancelAnimationFrame(window.rid);
+    window.rid = undefined;
+  };
+
+  const set_pause = state => {
+    pause = state;
+    _i('motion').checked = !pause;
     set_url();
-  }
-  window.px = 0;
-  window.py = 0;
-  _i('starfield').style.cursor = 'crosshair';
-  if (window.pause) {
+    time = performance.now();
     single_frame();
     start();
-  }
-}
+  };
 
-function mousemove(e) {
-  x = (e.offsetX - this.width / 2 - window.mx);
-  y = (e.offsetY - this.height / 2 - window.my);
-  if (window.drag || window.drago) {
-    window.px = x;
-    window.py = y;
+  const set_debug = state => {
+    debug = state;
+    _i('debug').checked = debug;
+    set_url();
+    single_frame();
     start();
-  }
-}
+  };
 
-function mousewheel(e) {
-  e.preventDefault();
-  window.distance -= e.deltaY / 2 ** 12 * window._f;
-  start();
-}
-
-const init = () => {
-  reset();
-  steps.forEach((v, i) => {
-    const btn = _c('div');
-    btn.id = 'step' + i + '_btn';
-    btn.n = i;
-    btn.className = 'step';
-    btn.textContent = 'step' + i + ': ' + v[0];
-    _a(_i('steps'), btn);
-    btn.addEventListener('click', run, false);
-  });
-  const sf = _i('starfield');
-  sf.addEventListener('mousemove', mousemove);
-  sf.addEventListener('mousedown', mousedown);
-  sf.addEventListener('mouseup', mouseup);
-  sf.addEventListener('mousewheel', mousewheel);
-  sf.addEventListener('mousewheel', mousewheel);
-  resize();
-  favicon();
-};
-
-const reset = () => {
-  let range = document.getElementsByTagName('input');
-  vars.forEach((v, i) => {
-    window[v[0]] = v[5];
-    for (let i = 0; i < range.length; i++) {
-      if (range[i].variable === v[0]) {
-        range[i].value = v[5];
-        const value = _i('value' + range[i].n);
-        if (value) {
-          value.textContent = range[i].value;
-        }
-        range_color(range[i]);
-        break;
+  const code2text = () => {
+    let text = String(_i('step' + step).textContent);
+    text = text.replaceAll('step' + step + '_', '');
+    text = text.replace('tick', 'requestAnimationFrame');
+    text = text.replaceAll('lcg', 'Math.random');
+    text = text.replaceAll('vx + ', '');
+    text = text.replaceAll('vy + ', '');
+    ['(', ')', '[', ']', '{', '}'].forEach(v => {
+      text = text.replaceAll(v, '«sy1»' + v + '¤');
+    });
+    ['.', ',', "'", '`', ':', ';', '='].forEach(v => {
+      text = text.replaceAll(v, '«sy2»' + v + '¤');
+    });
+    ['$', '#', '@', '%', '&', '|', '<', '>'].forEach(v => {
+      text = text.replaceAll(v, '«sy3»' + v + '¤');
+    });
+    ['if', 'for', 'continue', 'return', 'new', 'let', 'const'].forEach(v => {
+      text = text.replaceAll(v, '«sy4»' + v + '¤');
+    });
+    ['Math', 'Float32Array', 'requestAnimationFrame'].forEach(v => {
+      text = text.replaceAll(v, '«sy5»' + v + '¤');
+    });
+    ['stars', 'distance', 'depth'].forEach(v => {
+      text = text.replaceAll(v, '«sy6»' + v + '¤');
+    });
+    ['THRESHOLD', 'CIRCLE'].forEach(v => {
+      text = text.replaceAll(v, '«sy7»' + v + '¤');
+    });
+    vars.map(v => v[0]).forEach((v, i) => {
+      text = text.replaceAll(v, '«var var' + i + '»' + window[v] + '¤');
+    });
+    ['-', '+', '*', ' / ', '= '].forEach(v => {
+      text = text.replaceAll(v, '«op»' + v + '¤');
+    });
+    text = text.replaceAll('  ', '<span class="tab">│ </span>');
+    text = text.split('\n').slice(1);
+    text.pop();
+    const code = _i('code');
+    code.textContent = '';
+    let n = 0;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i].indexOf('// REM') !== -1) { continue; }
+      if (text[i].indexOf('// NREM') !== -1) {
+        text[i] = text[i].replace('// NREM', '');
+        text[i] = text[i].replace('//', '');
       }
-    }
-  });
-};
-
-const resize = e => {
-  const sf = _i('starfield');
-  const code = _i('code');
-  const steps = _i('steps');
-  let style = getComputedStyle(document.body);
-  const padding = parseInt(style.getPropertyValue('--padding'));
-  const border = parseInt(style.getPropertyValue('--border'));
-  w = innerWidth - padding * 4 - border * 4 - code.offsetWidth - steps.offsetWidth;
-  h = innerHeight - padding * 4 - border * 2 - _i('header').offsetHeight - 18 * vars.length;
-  ox = w / 2 + Number(url.get('ox'));
-  oy = h / 2 + Number(url.get('oy'));
-  dpr = window.devicePixelRatio;
-  sf.width = w * dpr;
-  sf.height = h * dpr;
-  sf.style.width = w + 'px';
-  sf.style.height = h + 'px';
-  ctx = sf.getContext('2d', { alpha: false });
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-  ctx.translate(ox, oy);
-  ctx.lineCap = 'round';
-  content.style.width = w + 'px';
-  _i('step' + step + '_btn').click(); // run code
-};
-
-const run = e => {
-  if (!e.srcElement) {
-    return;
-  }
-  set_url();
-  stop();
-  for (let i = 0; i <= vars.length; i++) {
-    _r(_i('slider' + i));
-    _r(_i('list' + i));
-  }
-  let btn = _i('step' + step + '_btn');
-  if (btn) {
-    btn.className = 'step';
-  }
-  step = parseInt(e.srcElement.n);
-  btn = _i('step' + step + '_btn');
-  if (!btn) {
-    return;
-  }
-  btn.className = 'step step_run';
-  const content = _i('content');
-  let n = 0;
-  for (let i = 0; i <= step; i++) {
-    const v = steps[i][1];
-    if (!v) { continue; }
-    for (let j = 0; j < v.length; j++) {
-      const [name, text, min, max, step] = vars[v[j]];
-      const slider = _c('form');
-      slider.id = 'slider' + n;
-      slider.style.width = w + 'px';
-      _a(content, slider);
-      const label = _c('label');
-      label.id = 'label' + n;
-      label.textContent = text;
-      label.style.float = 'left';
-      label.style.width = 56 + 'px';
-      _a(slider, label);
-      const range = _c('input');
-      range.type = 'range';
-      range.id = 'range' + n;
-      range.n = n;
-      range.variable = name;
-      range.min = min;
-      range.max = max;
-      range.step = step;
-      range.style.width = (w - 56 - 48) + 'px';
-      range.addEventListener('input', update, false);
-      _a(slider, range);
-      range.value = window[range.variable];
-      range_color(range);
-      const value = _c('output');
-      value.id = 'value' + n;
-      value.textContent = range.value;
-      value.className = 'val var' + n;
-      _a(slider, value);
+      const line = _c('div');
+      line.id = 'line' + n;
+      line.className = 'code';
+      let txt = '«line»' + n + '¤' + text[i] || '&nbsp;';
+      if (text[i].substr(0, 2) === '//') {
+        line.className += ' rem';
+        txt = txt.replaceAll('//', '');
+      }
+      txt = txt.replaceAll('«', '<span class="');
+      txt = txt.replaceAll('»', '">');
+      txt = txt.replaceAll('¤', '</span>');
+      line.innerHTML = txt;
+      _a(code, line);
       n++;
     }
-  }
-  ctx.globalCompositeOperation = 'source-over';
-  update();
-  single_frame();
-};
-
-const set_url = e => {
-  const title = 'starfield' + (step > 0 ? ' > step' + step + ': ' + steps[step][0] : '');
-  document.title = title;
-  let params = [
-    step > 0 ? 'step=' + step : null,
-    pause ? 'pause=true' : null,
-    debug ? 'debug=true' : null,
-    vx !== 0 ? 'x=' + vx : null,
-    vy !== 0 ? 'y=' + vy : null,
-    ox !== w / 2 ? 'ox=' + (ox - w / 2) : null,
-    oy !== h / 2 ? 'oy=' + (oy - h / 2) : null,
-  ];
-  params = params.filter(p => p !== null);
-  history.pushState({ data: '' }, title, root + (params.length > 0 ? '?' : '') + params.join('&'));
-};
-
-const update = e => {
-  stop();
-  const v = steps[step][1];
-  const range = e?.srcElement || _i('range' + (v ? v[0] : 2));
-  if (range) {
-    window[range.variable] = Number(range.value);
-    const value = _i('value' + range.n);
-    if (value) {
-      value.textContent = range.value;
-    }
-    range_color(range);
-    step12_init();
-  }
-  code2text();
-  start();
-};
-
-const range_color = range => {
-  const p = (range.value - range.min) / (range.max - range.min);
-  const r = 64;
-  const g = 80;
-  const b = 128;
-  const c1 = `rgb(${r},${g},${b})`;
-  const c2 = `rgb(${r + p * 64},${g - p * 32},${b - p * 64})`;
-  range.style.backgroundImage = `linear-gradient(90deg,${c1} 0%,${c2} ${p * 100}%,#444 ${p * 100}%)`;
-};
-
-const tick = fn => {
-  stop();
-  if (step > 5 && (!window.pause || window.drag || window.drago)) {
-    window.rid = requestAnimationFrame(fn);
-  }
-  rt[rti] = Math.min(1000 / (time - delta), rtmax);
-  rti = (rti + 1) % rtc;
-};
-
-const single_frame = () => {
-  if (!pause) { return; }
-  const opacity = _o;
-  _o = 1;
-  window['step' + window.step + '_draw']();
-  _o = opacity;
-};
-
-const start = () => {
-  stop();
-  const fn = window['step' + window.step + '_draw'];
-  window.rid = requestAnimationFrame(fn);
-};
-
-const stop = () => {
-  cancelAnimationFrame(window.rid);
-  window.rid = undefined;
-};
-
-const code2text = () => {
-  let text = String(_i('step' + step).textContent);
-  text = text.replaceAll('step' + step + '_', '');
-  text = text.replace('tick', 'requestAnimationFrame');
-  text = text.replaceAll('lcg', 'Math.random');
-  text = text.replaceAll('vx + ', '');
-  text = text.replaceAll('vy + ', '');
-  ['(', ')', '[', ']', '{', '}'].forEach(v => {
-    text = text.replaceAll(v, '«sy1»' + v + '¤');
-  });
-  ['.', ',', "'", '`', ':', ';', '='].forEach(v => {
-    text = text.replaceAll(v, '«sy2»' + v + '¤');
-  });
-  ['$', '#', '@', '%', '&', '|', '<', '>'].forEach(v => {
-    text = text.replaceAll(v, '«sy3»' + v + '¤');
-  });
-  ['if', 'for', 'continue', 'return', 'new', 'let', 'const'].forEach(v => {
-    text = text.replaceAll(v, '«sy4»' + v + '¤');
-  });
-  ['Math', 'Float32Array', 'requestAnimationFrame'].forEach(v => {
-    text = text.replaceAll(v, '«sy5»' + v + '¤');
-  });
-  ['stars', 'distance', 'depth'].forEach(v => {
-    text = text.replaceAll(v, '«sy6»' + v + '¤');
-  });
-  ['THRESHOLD', 'CIRCLE'].forEach(v => {
-    text = text.replaceAll(v, '«sy7»' + v + '¤');
-  });
-  vars.map(v => v[0]).forEach((v, i) => {
-    text = text.replaceAll(v, '«var var' + i + '»' + window[v] + '¤');
-  });
-  ['-', '+', '*', ' / ', '= '].forEach(v => {
-    text = text.replaceAll(v, '«op»' + v + '¤');
-  });
-  text = text.replaceAll('  ', '<span class="tab">│ </span>');
-  text = text.split('\n').slice(1);
-  text.pop();
-  const code = _i('code');
-  code.textContent = '';
-  let n = 0;
-  for (let i = 0; i < text.length; i++) {
-    if (text[i].indexOf('// REM') !== -1) { continue; }
-    if (text[i].indexOf('// NREM') !== -1) {
-      text[i] = text[i].replace('// NREM', '');
-      text[i] = text[i].replace('//', '');
-    }
-    const line = _c('div');
-    line.id = 'line' + n;
-    line.className = 'code';
-    let txt = '«line»' + n + '¤' + text[i] || '&nbsp;';
-    if (text[i].substr(0, 2) === '//') {
-      line.className += ' rem';
-      txt = txt.replaceAll('//', '');
-    }
-    txt = txt.replaceAll('«', '<span class="');
-    txt = txt.replaceAll('»', '">');
-    txt = txt.replaceAll('¤', '</span>');
-    line.innerHTML = txt;
-    _a(code, line);
-    n++;
-  }
-  let hl = steps[step][2] || [];
-  for (let i = 0; i < hl.length; i++) {
-    const line = _i('line' + hl[i])
-    if (line) {
-      line.className = 'code hl1';
-    }
-  }
-  hl = steps[step][3] || [];
-  for (let i = 0; i < hl.length; i++) {
-    const line = _i('line' + hl[i])
-    if (line) {
-      line.className = 'code hl2';
-    }
-  }
-};
-
-const keydown = e => {
-  shift = e.shiftKey;
-  key = e.key;
-  let id;
-  switch (e.key) {
-    case ' ':
-    case 'p':
-    case 'Enter':
-      pause = !pause;
-      set_url();
-      time = performance.now();
-      single_frame();
-      delta = time;
-      start();
-      break;
-    case 'ArrowUp':
-      id = (step + steps.length - 1) % steps.length;
-      _i('step' + id + '_btn').click();
-      break;
-    case 'ArrowDown':
-      id = (step + 1) % steps.length;
-      _i('step' + id + '_btn').click();
-      break;
-    case 'ArrowLeft':
-      star_n = (star_n + _nb - 1) % _nb;
-      single_frame();
-      start();
-      break;
-    case 'ArrowRight':
-      star_n = (star_n + 1) % _nb;
-      single_frame();
-      start();
-      break;
-    case 'Escape':
-      debug = !debug;
-      set_url();
-      single_frame();
-      start();
-      break;
-    case 'c':
-      ox = w / 2;
-      oy = h / 2;
-      vx = 0;
-      vy = 0;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      ctx.translate(ox, oy);
-      step12_init();
-      start();
-      break;
-    case 'r':
-      stop();
-      reset();
-      code2text();
-      step12_init();
-      start();
-      break;
-  }
-  //console.log(e.key);
-};
-
-const keyup = e => {
-  shift = e.shiftKey;
-  key = e.key;
-}
-
-addEventListener('load', init, false);
-addEventListener('resize', resize, false);
-addEventListener('keydown', keydown, false);
-addEventListener('keyup', keyup, false);
-addEventListener('drop', () => false, false);
-
-get_p = (x, y, z) => {
-  if (drag) {
-    x += px;
-    y += py;
-  }
-  depth = _fp - _np;
-  z -= distance % depth;
-  if (z < _np) {
-    z += depth;
-  } else if (z > _fp) {
-    z -= depth;
-  }
-  return [x, y, z];
-};
-
-translate = () => {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-  x = ox + (drago ? px : 0);
-  y = oy + (drago ? py : 0);
-  ctx.translate(x, y);
-};
-
-debug_draw = () => {
-  if (!debug) { return; }
-  const m = 2;
-  ctx.globalCompositeOperation = 'source-over';
-  //ctx.lineCap = 'round';
-  ctx.lineWidth = 1.5;
-  ctx.textAlign = 'center';
-  ctx.font = '16px/16px hud';
-  ctx.strokeStyle = '#5c0';
-  ctx.fillStyle = '#5c0';
-  let x0, y0, z0, r0, s0;
-  let x1, y1, z1, r1, s1;
-  let x2, y2, z2, r2, s2;
-  x = drag ? px : 0;
-  y = drag ? py : 0;
-  if (step === 1) {
-    x0 = drago ? px : vx;
-    y0 = drago ? py : vy;
-    x0 = (vx + x);
-    y0 = (vy + y);
-    x1 = vx + x - _w / 2 - m;
-    y1 = vy + y - _w / 2 - m;
-    s1 = _w + m * 2;
-  } else if (step === 2) {
-    x0 = (vx + x) / oz;
-    y0 = (vy + y) / oz;
-    x1 = (vx + x - _w / 2) / _fp - m;
-    y1 = (vy + y - _w / 2) / _fp - m;
-    s1 = _w / _fp + m * 2;
-    x2 = (vx + x - _w / 2) / _np - m;
-    y2 = (vy + y - _w / 2) / _np - m;
-    s2 = _w / _np + m * 2;
-  } else {
-    r0 = _f / oz;
-    x0 = (vx + x) * r0;
-    y0 = (vy + y) * r0;
-    r1 = _f / _fp;
-    x1 = (vx + x - _w / 2) * r1 - m;
-    y1 = (vy + y - _w / 2) * r1 - m;
-    s1 = _w * r1 + m * 2;
-    r2 = _f / _np;
-    x2 = (vx + x - _w / 2) * r2 - m;
-    y2 = (vy + y - _w / 2) * r2 - m;
-    s2 = _w * r2 + m * 2;
-  }
-  if (step === 0) {
-    ctx.fillText('HEY!', 48, -40);
-  } else if (step === 1) {
-    ctx.strokeRect(x1, y1, s1, s1);
-    ctx.fillText(_w + '×' + _w, x1 + s1 / 2, y1 - 5);
-  } else {
-    ctx.beginPath();
-    ctx.rect(x1, y1, s1, s1);
-    ctx.rect(x2, y2, s2, s2);
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.moveTo(x1 + s1, y1);
-    ctx.lineTo(x2 + s2, y2);
-    ctx.moveTo(x1 + s1, y1 + s1);
-    ctx.lineTo(x2 + s2, y2 + s2);
-    ctx.moveTo(x1, y1 + s1);
-    ctx.lineTo(x2, y2 + s2);
-    ctx.stroke();
-    ctx.fillText(_w + '×' + _w + '×' + (_fp - _np), x1 + s1 / 2, y1 - 4);
-  }
-  if (step > 1) {
-    ctx.beginPath();
-    ctx.moveTo(x0 - m * 2, y0);
-    ctx.lineTo(x0 + m * 2, y0);
-    ctx.moveTo(x0, y0 - m * 2);
-    ctx.lineTo(x0, y0 + m * 2);
-    ctx.stroke();
-    ctx.lineDashOffset = 8;
-    ctx.setLineDash([0.2, 8]);
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1 + s1 / 2, y1 + s1 / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.arc(x1 + s1 / 2, y1 + s1 / 2, _w / 128 * r1, 0, CIRCLE);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x2 + s2 / 2, y2 + s2 / 2, _w / 128 * r2, 0, CIRCLE);
-    ctx.stroke();
-    ctx.lineDashOffset = 8;
-    ctx.setLineDash([4, 8]);
-    ctx.beginPath();
-    ctx.moveTo(x1 + s1 / 2, y1 + s1 / 2);
-    ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  /* origin */
-  x = Math.round(ox - w / 2 + (drago ? px : 0));
-  y = Math.round(oy - h / 2 + (drago ? py : 0));
-  ctx.fillText(x + '×' + y, x0, y0 + 16);
-  /* center */
-  if (step === 12) {
-    ctx.beginPath();
-    ctx.arc(x1 + s1 / 2, y1 + s1 / 2, _w / 8 * r1, 0, CIRCLE);
-    ctx.setLineDash([s1 / 64, s1 / 64]);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x2 + s2 / 2, y2 + s2 / 2, _w / 8 * r2, 0, CIRCLE);
-    ctx.setLineDash([s2 / 64, s2 / 64]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  /* depth */
-  if (step > 7) {
-    x = drag ? px : 0;
-    y = drag ? py : 0;
-    r1 = _f / (_np + _dof * depth);
-    x1 = (vx + x - _w / 2) * r1;
-    y1 = (vy + y - _w / 2) * r1;
-    s1 = _w * r1;
-    ctx.beginPath();
-    ctx.rect(x1, y1, s1, s1);
-    if (step === 12) {
-      ctx.moveTo(x1 + s1 / 2 + s1 / 8, y1 + s1 / 2);
-      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, s1 / 8, 0, CIRCLE);
-    }
-    ctx.setLineDash([s1 / 64, s1 / 64]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  /* star position */
-  star_n = star_n % _nb;
-  if (stars[star_n]) {
-    ctx.strokeStyle = '#e50';
-    ctx.fillStyle = '#e50';
-    ctx.textAlign = 'center';
-    let p = Math.round(stars[star_n][0] - vx);
-    p += '×' + Math.round(stars[star_n][1] - vy);
-    [x, y, z] = get_position(stars[star_n]);
-    p += '×' + Math.round(z);
-    z = step > 1 ? z : _fp;
-    r = step !== 2 ? _f / z : 1 / z;
-    x *= r;
-    y *= r;
-    s1 = _s * r * 2 + m * 2;
-    s2 = _g * r + m * 2;
-    if (step > 0) {
-      ctx.strokeRect(x - s1 / 2, y - s1 / 2, s1, s1);
-      if (step < 7) {
-        ctx.fillText(p, x, y - s1 / 2 - 4);
+    let hl = steps[step][2] || [];
+    for (let i = 0; i < hl.length; i++) {
+      const line = _i('line' + hl[i])
+      if (line) {
+        line.className = 'code hl1';
       }
     }
-    if (step > 6) {
-      ctx.strokeRect(x - s2 / 2, y - s2 / 2, s2, s2);
-      ctx.fillText(p, x, y - s2 / 2 - 4);
+    hl = steps[step][3] || [];
+    for (let i = 0; i < hl.length; i++) {
+      const line = _i('line' + hl[i])
+      if (line) {
+        line.className = 'code hl2';
+      }
     }
+  };
+
+  const keydown = e => {
+    shift = e.shiftKey;
+    key = e.key;
+    let id;
+    switch (e.key) {
+      case ' ':
+      case 'p':
+        set_pause(!pause);
+        break;
+      case 'ArrowUp':
+        id = (step + steps.length - 1) % steps.length;
+        _i('step' + id + '_btn').click();
+        break;
+      case 'ArrowDown':
+        id = (step + 1) % steps.length;
+        _i('step' + id + '_btn').click();
+        break;
+      case 'ArrowLeft':
+        star_n = (star_n + _nb - 1) % _nb;
+        single_frame();
+        start();
+        break;
+      case 'ArrowRight':
+        star_n = (star_n + 1) % _nb;
+        single_frame();
+        start();
+        break;
+      case 'Escape':
+        set_debug(!debug);
+        break;
+      case 'c':
+        ox = w / 2;
+        oy = h / 2;
+        vx = 0;
+        vy = 0;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+        ctx.translate(ox, oy);
+        set_url();
+        step12_init();
+        single_frame();
+        start();
+        break;
+      case 'r':
+        stop();
+        reset();
+        set_url();
+        code2text();
+        step12_init();
+        single_frame();
+        start();
+        break;
+    }
+    //console.log(e.key);
+  };
+
+  const keyup = e => {
+    shift = e.shiftKey;
+    key = e.key;
   }
-  /* rendertime */
-  x = (drago ? -px : 0) - ox + w - 8;
-  y = (drago ? -py : 0) - oy + 8;
-  ctx.strokeStyle = '#d90';
-  ctx.fillStyle = '#d90';
-  ctx.strokeRect(x - rtc, y, rtc, rth);
-  ctx.beginPath();
-  let rtm = 0;
-  for (let i = 0; i < rtc; i++) {
-    let k = rti + i;
-    if (k > rtc - 1) { k -= rtc; }
-    const v = rth / rtmax * rt[k];
-    ctx.rect(x - rtc - 0.75 + i, y + rth - v - 0.75, 1.5, 1.5);
-    if (i > rtc - 33) { rtm += rt[k]; }
-  }
-  ctx.fill();
-  ctx.textAlign = 'right';
-  ctx.fillText(Math.floor(rtm / 32), x - m, y + m + 12);
-  ctx.fillText(Math.round(distance) + ' LY', x, y + h - 16);
-};
+
+  get_p = (x, y, z) => {
+    if (drag) {
+      x += px;
+      y += py;
+    }
+    depth = _fp - _np;
+    z -= distance % depth;
+    if (z < _np) {
+      z += depth;
+    } else if (z > _fp) {
+      z -= depth;
+    }
+    return [x, y, z];
+  };
+
+  translate = () => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    x = ox + (drago ? px : 0);
+    y = oy + (drago ? py : 0);
+    ctx.translate(x, y);
+  };
+
+  update_distance = () => {
+    if (!pause) {
+      distance += (time - delta) / 1000 * _m;
+      distance = distance % (depth * 2);
+    }
+  };
+
+  debug_draw = () => {
+    if (!debug) { return; }
+    const m = 2;
+    ctx.globalCompositeOperation = 'source-over';
+    //ctx.lineCap = 'round';
+    ctx.lineWidth = 1.5;
+    ctx.textAlign = 'center';
+    ctx.font = '16px/16px hud';
+    ctx.strokeStyle = '#5c0';
+    ctx.fillStyle = '#5c0';
+    let x0, y0, z0, r0, s0;
+    let x1, y1, z1, r1, s1;
+    let x2, y2, z2, r2, s2;
+    x = drag ? px : 0;
+    y = drag ? py : 0;
+    if (step === 1) {
+      x0 = drago ? px : vx;
+      y0 = drago ? py : vy;
+      x0 = (vx + x);
+      y0 = (vy + y);
+      x1 = vx + x - _w / 2 - m;
+      y1 = vy + y - _w / 2 - m;
+      s1 = _w + m * 2;
+    } else if (step === 2) {
+      x0 = (vx + x) / oz;
+      y0 = (vy + y) / oz;
+      x1 = (vx + x - _w / 2) / _fp - m;
+      y1 = (vy + y - _w / 2) / _fp - m;
+      s1 = _w / _fp + m * 2;
+      x2 = (vx + x - _w / 2) / _np - m;
+      y2 = (vy + y - _w / 2) / _np - m;
+      s2 = _w / _np + m * 2;
+    } else {
+      r0 = _f / oz;
+      x0 = (vx + x) * r0;
+      y0 = (vy + y) * r0;
+      r1 = _f / _fp;
+      x1 = (vx + x - _w / 2) * r1 - m;
+      y1 = (vy + y - _w / 2) * r1 - m;
+      s1 = _w * r1 + m * 2;
+      r2 = _f / _np;
+      x2 = (vx + x - _w / 2) * r2 - m;
+      y2 = (vy + y - _w / 2) * r2 - m;
+      s2 = _w * r2 + m * 2;
+    }
+    if (step === 0) {
+      ctx.fillText('HEY!', 48, -40);
+    } else if (step === 1) {
+      ctx.strokeRect(x1, y1, s1, s1);
+      ctx.fillText(_w + '×' + _w, x1 + s1 / 2, y1 - 5);
+    } else {
+      ctx.beginPath();
+      ctx.rect(x1, y1, s1, s1);
+      ctx.rect(x2, y2, s2, s2);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.moveTo(x1 + s1, y1);
+      ctx.lineTo(x2 + s2, y2);
+      ctx.moveTo(x1 + s1, y1 + s1);
+      ctx.lineTo(x2 + s2, y2 + s2);
+      ctx.moveTo(x1, y1 + s1);
+      ctx.lineTo(x2, y2 + s2);
+      ctx.stroke();
+      ctx.fillText(_w + '×' + _w + '×' + (_fp - _np), x1 + s1 / 2, y1 - 4);
+    }
+    if (step > 1) {
+      ctx.beginPath();
+      ctx.moveTo(x0 - m * 2, y0);
+      ctx.lineTo(x0 + m * 2, y0);
+      ctx.moveTo(x0, y0 - m * 2);
+      ctx.lineTo(x0, y0 + m * 2);
+      ctx.stroke();
+      ctx.lineDashOffset = 8;
+      ctx.setLineDash([0.2, 8]);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1 + s1 / 2, y1 + s1 / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, _w / 128 * r1, 0, CIRCLE);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, _w / 128 * r2, 0, CIRCLE);
+      ctx.stroke();
+      ctx.lineDashOffset = 8;
+      ctx.setLineDash([4, 8]);
+      ctx.beginPath();
+      ctx.moveTo(x1 + s1 / 2, y1 + s1 / 2);
+      ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    /* origin */
+    x = Math.round(ox - w / 2 + (drago ? px : 0));
+    y = Math.round(oy - h / 2 + (drago ? py : 0));
+    ctx.fillText(x + '×' + y, x0, y0 + 16);
+    /* center */
+    if (step === 12) {
+      ctx.beginPath();
+      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, _w / 8 * r1, 0, CIRCLE);
+      ctx.setLineDash([s1 / 64, s1 / 64]);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, _w / 8 * r2, 0, CIRCLE);
+      ctx.setLineDash([s2 / 64, s2 / 64]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    /* depth */
+    if (step > 7) {
+      x = drag ? px : 0;
+      y = drag ? py : 0;
+      r1 = _f / (_np + _dof * depth);
+      x1 = (vx + x - _w / 2) * r1;
+      y1 = (vy + y - _w / 2) * r1;
+      s1 = _w * r1;
+      ctx.beginPath();
+      ctx.rect(x1, y1, s1, s1);
+      if (step === 12) {
+        ctx.moveTo(x1 + s1 / 2 + s1 / 8, y1 + s1 / 2);
+        ctx.arc(x1 + s1 / 2, y1 + s1 / 2, s1 / 8, 0, CIRCLE);
+      }
+      ctx.setLineDash([s1 / 64, s1 / 64]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    /* star position */
+    star_n = star_n % _nb;
+    if (stars[star_n]) {
+      ctx.strokeStyle = '#e50';
+      ctx.fillStyle = '#e50';
+      ctx.textAlign = 'center';
+      let p = Math.round(stars[star_n][0] - vx);
+      p += '×' + Math.round(stars[star_n][1] - vy);
+      [x, y, z] = get_position(stars[star_n]);
+      p += '×' + Math.round(z);
+      z = step > 1 ? z : _fp;
+      r = step !== 2 ? _f / z : 1 / z;
+      x *= r;
+      y *= r;
+      s1 = _s * r * 2 + m * 2;
+      s2 = _g * r + m * 2;
+      if (step > 0) {
+        ctx.strokeRect(x - s1 / 2, y - s1 / 2, s1, s1);
+        if (step < 7) {
+          ctx.fillText(p, x, y - s1 / 2 - 4);
+        }
+      }
+      if (step > 6) {
+        ctx.strokeRect(x - s2 / 2, y - s2 / 2, s2, s2);
+        ctx.fillText(p, x, y - s2 / 2 - 4);
+      }
+    }
+    /* rendertime */
+    x = (drago ? -px : 0) - ox + w - 8;
+    y = (drago ? -py : 0) - oy + 8;
+    ctx.strokeStyle = '#d90';
+    ctx.fillStyle = '#d90';
+    ctx.strokeRect(x - rtc, y, rtc, rth);
+    ctx.beginPath();
+    let rtm = 0;
+    for (let i = 0; i < rtc; i++) {
+      let k = rti + i;
+      if (k > rtc - 1) { k -= rtc; }
+      const v = rth / rtmax * rt[k];
+      ctx.rect(x - rtc - 0.75 + i, y + rth - v - 0.75, 1.5, 1.5);
+      if (i > rtc - 33) { rtm += rt[k]; }
+    }
+    ctx.fill();
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.floor(rtm / 32), x - m, y + m + 12);
+    ctx.fillText(Math.round(distance) + ' LY', x, y + h - 16);
+  };
 </script>
 
 <script type="application/javascript" id="step0">
-step0_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = '#000';
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#fff';
-  ctx.font = 'normal 20px/100% sans-serif';
-  ctx.fillText('ᕕ( ᐛ )ᕗ', 0, -16);
-  debug_draw(); // REM
-};
+  step0_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'normal 20px/100% sans-serif';
+    ctx.fillText('ᕕ( ᐛ )ᕗ', 0, -16);
+    debug_draw(); // REM
+  };
 
-// # README #
-// you can use the mouse to move the stars (click + drag)
-// and the mousewheel to change the distance.
-// shift + drag will change the world origin.
+  // # README #
+  // you can use the mouse to move the stars (click + drag)
+  // and the mousewheel to change the distance.
+  // shift + drag will change the world origin.
 
-// # SHORTCUTS #
-// r: reset all parameters
-// c: reset the stars position
-// esc: debug mode on/off
-// space: animation play/pause
-// up/down: cycle through steps
+  // # SHORTCUTS #
+  // r: reset all parameters
+  // c: reset the stars position
+  // esc: debug mode on/off
+  // space: animation play/pause
+  // up/down: cycle through steps
 
-// # SOURCE #
-// github.com/chiptune/starfield
+  // # SOURCE #
+  // github.com/chiptune/starfield
 </script>
 
 <script type="application/javascript" id="step1">
-step1_init = () => {
-  window.seed = (1 + Math.sqrt(5)) / 2; // REM
-  for (let i = 0; i < _nb; i++) {
-    stars[i] = new Float32Array(2);
-    stars[i][0] = vx + (lcg() - 0.5) * _w;
-    stars[i][1] = vy + (lcg() - 0.5) * _w;
-  }
-};
+  step1_init = () => {
+    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    for (let i = 0; i < _nb; i++) {
+      stars[i] = new Float32Array(2);
+      stars[i][0] = vx + (lcg() - 0.5) * _w;
+      stars[i][1] = vy + (lcg() - 0.5) * _w;
+    }
+  };
 
-step1_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = '#000';
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  ctx.fillStyle = '#fff';
-  for (let i = 0; i < _nb; i++) {
-    [x, y] = stars[i];
-    ctx.beginPath();
-    x += (drago ? -px : 0); // REM
-    y += (drago ? -py : 0); // REM
-    ctx.arc(px + x, py + y, _s * 2, 0, CIRCLE); // REM
-    //ctx.arc(x, y, _s * 2, 0, CIRCLE); // NREM
-    ctx.fill();
-  }
-  delta = time; // REM
-  time = performance.now(); // REM
-  debug_draw(); // REM
-  tick(step1_draw); // REM
-};
+  step1_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < _nb; i++) {
+      [x, y] = stars[i];
+      ctx.beginPath();
+      x += (drago ? -px : 0); // REM
+      y += (drago ? -py : 0); // REM
+      ctx.arc(px + x, py + y, _s * 2, 0, CIRCLE); // REM
+      //ctx.arc(x, y, _s * 2, 0, CIRCLE); // NREM
+      ctx.fill();
+    }
+    delta = time; // REM
+    time = performance.now(); // REM
+    debug_draw(); // REM
+    tick(step1_draw); // REM
+  };
 
-CIRCLE = Math.PI * 2; // 360° in radians
+  CIRCLE = Math.PI * 2; // 360° in radians
 </script>
 
 <script type="application/javascript" id="step2">
-step2_init = () => {
-  window.seed = (1 + Math.sqrt(5)) / 2; // REM
-  depth = _fp - _np;
-  for (let i = 0; i < _nb; i++) {
-    stars[i] = new Float32Array(3);
-    stars[i][0] = vx + (lcg() - 0.5) * _w;
-    stars[i][1] = vy + (lcg() - 0.5) * _w;
-    stars[i][2] = _np + depth / _nb * i;
-  }
-};
+  step2_init = () => {
+    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    depth = _fp - _np;
+    for (let i = 0; i < _nb; i++) {
+      stars[i] = new Float32Array(3);
+      stars[i][0] = vx + (lcg() - 0.5) * _w;
+      stars[i][1] = vy + (lcg() - 0.5) * _w;
+      stars[i][2] = _np + depth / _nb * i;
+    }
+  };
 
-step2_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = '#000';
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  ctx.fillStyle = '#fff';
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = stars[i];
-    [x, y, z] = get_p(x, y, z); // REM
-    ctx.beginPath();
-    ctx.arc(x / z, y / z, _s * 2, 0, CIRCLE);
-    ctx.fill();
-  }
-  delta = time; // REM
-  time = performance.now(); // REM
-  debug_draw(); // REM
-  tick(step2_draw); // REM
-};
+  step2_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = stars[i];
+      [x, y, z] = get_p(x, y, z); // REM
+      ctx.beginPath();
+      ctx.arc(x / z, y / z, _s * 2, 0, CIRCLE);
+      ctx.fill();
+    }
+    delta = time; // REM
+    time = performance.now(); // REM
+    debug_draw(); // REM
+    tick(step2_draw); // REM
+  };
 </script>
 
 <script type="application/javascript" id="step3">
-step3_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = '#000';
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  ctx.fillStyle = '#fff';
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = stars[i];
-    [x, y, z] = get_p(x, y, z); // REM
-    r = 1 / z * _f;
-    ctx.beginPath();
-    ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
-    ctx.fill();
-  }
-  delta = time; // REM
-  time = performance.now(); // REM
-  debug_draw(); // REM
-  tick(step3_draw); // REM
-};
+  step3_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = stars[i];
+      [x, y, z] = get_p(x, y, z); // REM
+      r = 1 / z * _f;
+      ctx.beginPath();
+      ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
+      ctx.fill();
+    }
+    delta = time; // REM
+    time = performance.now(); // REM
+    debug_draw(); // REM
+    tick(step3_draw); // REM
+  };
 </script>
 
 <script type="application/javascript" id="step4">
-step4_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = '#000';
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = stars[i];
-    [x, y, z] = get_p(x, y, z); // REM
-    r = _f / z;
-    z -= _np;
-    c = (1 - z / depth) * 255;
-    ctx.fillStyle = `rgb(${c},${c},${c})`;
-    ctx.beginPath();
-    ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
-    ctx.fill();
-  }
-  delta = time; // REM
-  time = performance.now(); // REM
-  debug_draw(); // REM
-  tick(step4_draw); // REM
-};
+  step4_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = stars[i];
+      [x, y, z] = get_p(x, y, z); // REM
+      r = _f / z;
+      z -= _np;
+      c = (1 - Math.pow(z / depth, _cl)) * 255.999;
+      ctx.fillStyle = `rgb(${c},${c},${c})`;
+      ctx.beginPath();
+      ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
+      ctx.fill();
+    }
+    delta = time; // REM
+    time = performance.now(); // REM
+    debug_draw(); // REM
+    tick(step4_draw); // REM
+  };
 </script>
 
 <script type="application/javascript" id="step5">
-step5_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = '#000';
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = stars[get_index(i)];
-    [x, y, z] = get_p(x, y, z); // REM
-    r = _f / z;
-    z -= _np;
-    c = (1 - z / depth) * 255;
-    ctx.fillStyle = `rgb(${c},${c},${c})`;
-    ctx.beginPath();
-    ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
-    ctx.fill();
-  }
-  delta = time; // REM
-  time = performance.now(); // REM
-  debug_draw(); // REM
-  tick(step5_draw); // REM
-};
+  step5_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = stars[get_index(i)];
+      [x, y, z] = get_p(x, y, z); // REM
+      r = _f / z;
+      z -= _np;
+      c = (1 - Math.pow(z / depth, _cl)) * 255.999;
+      ctx.fillStyle = `rgb(${c},${c},${c})`;
+      ctx.beginPath();
+      ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
+      ctx.fill();
+    }
+    delta = time; // REM
+    time = performance.now(); // REM
+    debug_draw(); // REM
+    tick(step5_draw); // REM
+  };
 
-get_index = i => {
-  let d = distance % depth;
-  if (d < 0) { d += depth; }
-  let n = Math.floor(d / depth * _nb) - i;
-  if (n < 0) { n += _nb; }
-  if (n > _nb - 1) { n -= _nb; }
-  return n;
-};
+  get_index = i => {
+    let d = distance % depth;
+    if (d < 0) { d += depth; }
+    let n = Math.floor(d / depth * _nb) - i;
+    if (n < 0) { n += _nb; }
+    if (n > _nb - 1) { n -= _nb; }
+    return n;
+  };
 </script>
 
 <script type="application/javascript" id="step6">
-step6_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = `rgba(0,0,0,${_o})`;
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = get_position(stars[get_index(i)]);
-    r = _f / z;
-    z -= _np;
-    c = (1 - z / depth) * 255;
-    ctx.fillStyle = `rgb(${c},${c},${c})`;
-    ctx.beginPath();
-    ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
-    ctx.fill();
-  }
-  delta = time;
-  time = performance.now();
-  if (!pause) { // REM
-  distance += (time - delta) / 1000 * _m;
-  } // REM
-  debug_draw(); // REM
-  tick(step6_draw);
-};
+  step6_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = `rgba(0,0,0,${_o})`;
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = get_position(stars[get_index(i)]);
+      r = _f / z;
+      z -= _np;
+      c = (1 - Math.pow(z / depth, _cl)) * 255.999;
+      ctx.fillStyle = `rgb(${c},${c},${c})`;
+      ctx.beginPath();
+      ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
+      ctx.fill();
+    }
+    delta = time;
+    time = performance.now();
+    //distance += (time - delta) / 1000 * _m; // EREM
+    update_distance(); // REM
+    debug_draw(); // REM
+    tick(step6_draw);
+  };
 
-get_position = star => {
-  [x, y, z] = star;
-  if (drag) { // REM
-    x += px; // REM
-    y += py; // REM
-  } // REM
-  z -= distance % depth;
-  if (z < _np) {
-    z += depth;
-  } else if (z > _fp) {
-    z -= depth;
-  }
-  return [x, y, z];
-};
+  get_position = star => {
+    [x, y, z] = star;
+    if (drag) { // REM
+      x += px; // REM
+      y += py; // REM
+    } // REM
+    z -= distance % depth;
+    if (z < _np) {
+      z += depth;
+    } else if (z > _fp) {
+      z -= depth;
+    }
+    return [x, y, z];
+  };
 </script>
 
 <script type="application/javascript" id="step7">
-step7_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = `rgba(0,0,0,${_o})`;
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = get_position(stars[i]);
-    r = _f / z;
-    d = _g * r;
-    if (d < 4) { continue; }
-    x *= r;
-    y *= r;
-    z -= _np;
-    a = 1 - z / depth;
-    rad1 = _s / _g * 0.95;
-    rad2 = _s / _g * 1.05;
-    g = ctx.createRadialGradient(x, y, 0, x, y, d);
-    g.addColorStop(0, `hsl(0 0% 100% / ${a})`);
-    g.addColorStop(rad1, `hsl(0 0% 100% / ${a})`);
-    g.addColorStop(rad2, `hsl(0 0% 100% / ${a * _h * _o})`);
-    g.addColorStop(1, 'hsl(0 0% 100% / 0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x - d, y - d, d * 2, d * 2);
-  }
-  delta = time;
-  time = performance.now();
-  if (!pause) { // REM
-  distance += (time - delta) / 1000 * _m;
-  } // REM
-  debug_draw(); // REM
-  tick(step7_draw);
-};
+  step7_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = `rgba(0,0,0,${_o})`;
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = get_position(stars[i]);
+      r = _f / z;
+      d = _g * r;
+      x *= r;
+      y *= r;
+      z -= _np;
+      a = 1 - Math.pow(z / depth, _cl);
+      rad1 = _s / _g * 0.95;
+      rad2 = _s / _g * 1.05;
+      g = ctx.createRadialGradient(x, y, 0, x, y, d);
+      g.addColorStop(0, `hsl(0 0% 100% / ${a})`);
+      g.addColorStop(rad1, `hsl(0 0% 100% / ${a})`);
+      g.addColorStop(rad2, `hsl(0 0% 100% / ${a * _h * _o})`);
+      g.addColorStop(1, 'hsl(0 0% 100% / 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, y - d, d * 2, d * 2);
+    }
+    delta = time;
+    time = performance.now();
+    //distance += (time - delta) / 1000 * _m; // EREM
+    update_distance(); // REM
+    debug_draw(); // REM
+    tick(step7_draw);
+  };
 </script>
 
 <script type="application/javascript" id="step8">
-step8_draw = () => {
-  translate(); // REM
-  ctx.fillStyle = `rgba(0,0,0,${_o})`;
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = get_position(stars[i]);
-    r = _f / z;
-    d = _g * r;
-    if (d < 4) { continue; }
-    x *= r;
-    y *= r;
-    z -= _np;
-    dof = Math.min(1, z / (depth * _dof));
-    a = (1 - z / depth) * dof;
-    rad1 = Math.max(_s / _g * 0.95 * dof, 0);
-    rad2 = Math.min(_s / _g * 1.05 * (2 - dof), 1);
-    g = ctx.createRadialGradient(x, y, 0, x, y, d);
-    g.addColorStop(0, `hsl(0 0% 100% / ${a})`);
-    g.addColorStop(rad1, `hsl(0 0% 100% / ${a})`);
-    g.addColorStop(rad2, `hsl(0 0% 100% / ${a * _h * _o})`);
-    g.addColorStop(1, 'hsl(0 0% 100% / 0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x - d, y - d, d * 2, d * 2);
-  }
-  delta = time;
-  time = performance.now();
-  if (!pause) { // REM
-  distance += (time - delta) / 1000 * _m;
-  } // REM
-  debug_draw(); // REM
-  tick(step8_draw);
-};
+  step8_draw = () => {
+    translate(); // REM
+    ctx.fillStyle = `rgba(0,0,0,${_o})`;
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = get_position(stars[i]);
+      r = _f / z;
+      d = _g * r;
+      x *= r;
+      y *= r;
+      z -= _np;
+      dof = Math.min(1, z / (depth * _dof));
+      a = (1 - Math.pow(z / depth, _cl)) * dof;
+      rad1 = Math.max(_s / _g * 0.95 * dof, 0);
+      rad2 = Math.min(_s / _g * 1.05 * (2 - dof), 1);
+      g = ctx.createRadialGradient(x, y, 0, x, y, d);
+      g.addColorStop(0, `hsl(0 0% 100% / ${a})`);
+      g.addColorStop(rad1, `hsl(0 0% 100% / ${a})`);
+      g.addColorStop(rad2, `hsl(0 0% 100% / ${a * _h * _o})`);
+      g.addColorStop(1, 'hsl(0 0% 100% / 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, y - d, d * 2, d * 2);
+    }
+    delta = time;
+    time = performance.now();
+    //distance += (time - delta) / 1000 * _m; // EREM
+    update_distance(); // REM
+    debug_draw(); // REM
+    tick(step8_draw);
+  };
 </script>
 
 <script type="application/javascript" id="step9">
-step9_draw = () => {
-  step9_clear();
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = get_position(stars[i]);
-    r = _f / z;
-    d = _g * r;
-    if (d < 4) { continue; }
-    x *= r;
-    y *= r;
-    z -= _np;
-    dof = Math.min(1, z / (depth * _dof));
-    l = (1 - z / depth) * 100 * dof;
-    rad1 = Math.max(_s / _g * 0.95 * dof, 0);
-    rad2 = Math.min(_s / _g * 1.05 * (2 - dof), 1);
-    g = ctx.createRadialGradient(x, y, 0, x, y, d);
-    g.addColorStop(0, `hsl(0 0% ${l}%)`);
-    g.addColorStop(rad1, `hsl(0 0% ${l}%)`);
-    g.addColorStop(rad2, `hsl(0 0% ${l * _h * _o}%)`);
-    g.addColorStop(1, 'hsl(0 0% 0%)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x - d, y - d, d * 2, d * 2);
-  }
-  delta = time;
-  time = performance.now();
-  if (!pause) { // REM
-  distance += (time - delta) / 1000 * _m;
-  } // REM
-  tick(step9_draw);
-  debug_draw(); // REM
-};
+  step9_draw = () => {
+    step9_clear();
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = get_position(stars[i]);
+      r = _f / z;
+      d = _g * r;
+      x *= r;
+      y *= r;
+      z -= _np;
+      dof = Math.min(1, z / (depth * _dof));
+      l = (1 - Math.pow(z / depth, _cl)) * 100 * dof;
+      rad1 = Math.max(_s / _g * 0.95 * dof, 0);
+      rad2 = Math.min(_s / _g * 1.05 * (2 - dof), 1);
+      g = ctx.createRadialGradient(x, y, 0, x, y, d);
+      g.addColorStop(0, `hsl(0 0% ${l}%)`);
+      g.addColorStop(rad1, `hsl(0 0% ${l}%)`);
+      g.addColorStop(rad2, `hsl(0 0% ${l * _h * _o}%)`);
+      g.addColorStop(1, 'hsl(0 0% 0%)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, y - d, d * 2, d * 2);
+    }
+    delta = time;
+    time = performance.now();
+    //distance += (time - delta) / 1000 * _m; // EREM
+    update_distance(); // REM
+    debug_draw(); // REM
+    tick(step9_draw);
+  };
 
-step9_clear = () => {
-  ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
-  ctx.scale(dpr, dpr); // REM
-  x = ox + (drago ? px : 0); // REM
-  y = oy + (drago ? py : 0); // REM
-  ctx.translate(x, y); // REM
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = `rgba(0,0,0,${_o})`;
-  ctx.fillRect(-x, -y, w, h); // REM
-  //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-  ctx.globalCompositeOperation = 'lighter';
-}
+  step9_clear = () => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
+    ctx.scale(dpr, dpr); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
+    ctx.translate(x, y); // REM
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = `rgba(0,0,0,${_o})`;
+    ctx.fillRect(-x, -y, w, h); // REM
+    //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
+    ctx.globalCompositeOperation = 'lighter';
+  }
 </script>
 
 <script type="application/javascript" id="step10">
-step10_init = () => {
-  window.seed = (1 + Math.sqrt(5)) / 2; // REM
-  depth = _fp - _np;
-  for (let i = 0; i < _nb; i++) {
-    x = lcg() - 0.5;
-    y = lcg() - 0.5;
-    stars[i] = new Float32Array(5);
-    stars[i][0] = vx + x * _w;
-    stars[i][1] = vy + y * _w;
-    stars[i][2] = _np + depth / _nb * i;
-    stars[i][3] = (lcg() * 3 - x - y) * 30;
-    stars[i][4] = lcg() * 200 - 50;
-  }
-};
+  step10_init = () => {
+    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    depth = _fp - _np;
+    for (let i = 0; i < _nb; i++) {
+      x = lcg() - 0.5;
+      y = lcg() - 0.5;
+      stars[i] = new Float32Array(5);
+      stars[i][0] = vx + x * _w;
+      stars[i][1] = vy + y * _w;
+      stars[i][2] = _np + depth / _nb * i;
+      stars[i][3] = (lcg() * 3 - x - y) * 30;
+      stars[i][4] = lcg() * 200 - 50;
+    }
+  };
 
-step10_draw = () => {
-  clear();
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = get_position(stars[i]);
-    r = _f / z;
-    d = _g * r;
-    if (d < 4) { continue; }
-    x *= r;
-    y *= r;
-    z -= _np;
-    u = stars[i][3] + 180 / depth * (z + distance);
-    s = stars[i][4] * _cs;
-    dof = Math.min(1, z / (depth * _dof));
-    l = (1 - z / depth) * 100 * dof * _o;
-    rad1 = Math.max(_s / _g * dof * 0.95, 0);
-    rad2 = Math.min(_s / _g * (2.05 - dof), 1);
-    g = ctx.createRadialGradient(x, y, 0, x, y, d);
-    g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
-    g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-    g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
-    g.addColorStop(1, `hsl(${u} 0% 0%)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(x - d, y - d, d * 2, d * 2);
-  }
-  delta = time;
-  time = performance.now();
-  if (!pause) { // REM
-  distance += (time - delta) / 1000 * _m;
-  } // REM
-  debug_draw(); // REM
-  tick(step10_draw);
-};
+  step10_draw = () => {
+    clear();
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = get_position(stars[i]);
+      r = _f / z;
+      d = _g * r;
+      x *= r;
+      y *= r;
+      z -= _np;
+      u = stars[i][3] + 180 / depth * (z + distance);
+      s = stars[i][4] * _cs;
+      dof = Math.min(1, z / (depth * _dof));
+      l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
+      rad1 = Math.max(_s / _g * dof * 0.95, 0);
+      rad2 = Math.min(_s / _g * (2.05 - dof), 1);
+      g = ctx.createRadialGradient(x, y, 0, x, y, d);
+      g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
+      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
+      g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
+      g.addColorStop(1, `hsl(${u} 0% 0%)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, y - d, d * 2, d * 2);
+    }
+    delta = time;
+    time = performance.now();
+    //distance += (time - delta) / 1000 * _m; // EREM
+    update_distance(); // REM
+    debug_draw(); // REM
+    tick(step10_draw);
+  };
 
-clear = () => {
-  ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
-  ctx.scale(dpr, dpr); // REM
-  x = ox + (drago ? px : 0); // REM
-  y = oy + (drago ? py : 0); // REM
-  ctx.translate(x, y); // REM
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = `hsl(${360 / depth * distance} ${_cs * 100}%  5% / ${_o})`;
-  ctx.fillRect(-x, -y, w, h);
-  ctx.globalCompositeOperation = 'lighter';
-}
+  clear = () => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
+    ctx.scale(dpr, dpr); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
+    ctx.translate(x, y); // REM
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = `hsl(${360 / depth * distance} ${_cs * 100}%  5% / ${_o})`;
+    ctx.fillRect(-x, -y, w, h);
+    ctx.globalCompositeOperation = 'lighter';
+  }
 </script>
 
 <script type="application/javascript" id="step11">
-step11_draw = () => {
-  clear();
-  for (let i = 0; i < _nb; i++) {
-    [x, y, z] = get_position(stars[i]);
-    r = _f / z;
-    d = _g * r;
-    if (d < 4) { continue; }
-    x *= r;
-    y *= r;
-    z -= _np;
-    u = stars[i][3] + 180 / depth * (z + distance);
-    s = stars[i][4] * _cs;
-    dof = Math.min(1, z / (depth * _dof));
-    l = (1 - z / depth) * 100 * dof * _o;
-    rad1 = Math.max(_s / _g * dof * 0.95, 0);
-    rad2 = Math.min(_s / _g * (2.05 - dof), 1);
-    g = ctx.createRadialGradient(x, y, 0, x, y, d);
-    g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
-    g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-    g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
-    g.addColorStop(1, `hsl(${u} 0% 0%)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(x - d, y - d, d * 2, d * 2);
-    k = _k * r;
-    if (s > 0) { continue; }
-    rad1 = Math.max(_s / _k * dof * 0.95, 0);
-    rad2 = Math.min(_s / _k * (2.05 - dof), 1);
-    g = ctx.createRadialGradient(x, y, 0, x, y, k);
-    g.addColorStop(0, '#000');
-    g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-    g.addColorStop(rad2, `hsl(${u} ${s}% ${l}%)`);
-    g.addColorStop(0.3, `hsl(${u + 30} ${s}% ${l / 3}%)`);
-    g.addColorStop(1, `hsl(${u + 90} ${s}% 0%)`);
-    ctx.fillStyle = g;
-    sw = _s * r * 1.8;
-    st = sw / 6;
-    sr = sw - st;
-    ctx.beginPath();
-    ctx.arc(x - sw, y - sw, sr, CIRCLE / 4, 0, true);
-    ctx.lineTo(x - st, y - k);
-    ctx.lineTo(x + st, y - k);
-    ctx.arc(x + sw, y - sw, sr, CIRCLE / 2, CIRCLE / 4, true);
-    ctx.lineTo(x + k, y - st);
-    ctx.lineTo(x + k, y + st);
-    ctx.arc(x + sw, y + sw, sr, -CIRCLE / 4, CIRCLE / 2, true);
-    ctx.lineTo(x + st, y + k);
-    ctx.lineTo(x - st, y + k);
-    ctx.arc(x - sw, y + sw, sr, 0, -CIRCLE / 4, true);
-    ctx.lineTo(x - k, y + st);
-    ctx.lineTo(x - k, y - st);
-    ctx.fill();
-  }
-  delta = time;
-  time = performance.now();
-  if (!pause) { // REM
-  distance += (time - delta) / 1000 * _m;
-  } // REM
-  debug_draw(); // REM
-  tick(step11_draw);
-};
+  step11_draw = () => {
+    clear();
+    for (let i = 0; i < _nb; i++) {
+      [x, y, z] = get_position(stars[i]);
+      r = _f / z;
+      d = _g * r;
+      x *= r;
+      y *= r;
+      z -= _np;
+      u = stars[i][3] + 180 / depth * (z + distance);
+      s = stars[i][4] * _cs;
+      dof = Math.min(1, z / (depth * _dof));
+      l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
+      rad1 = Math.max(_s / _g * dof * 0.95, 0);
+      rad2 = Math.min(_s / _g * (2.05 - dof), 1);
+      g = ctx.createRadialGradient(x, y, 0, x, y, d);
+      g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
+      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
+      g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
+      g.addColorStop(1, `hsl(${u} 0% 0%)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, y - d, d * 2, d * 2);
+      k = _k * r;
+      if (s > 0) { continue; }
+      rad1 = Math.max(_s / _k * dof * 0.95, 0);
+      rad2 = Math.min(_s / _k * (2.05 - dof), 1);
+      g = ctx.createRadialGradient(x, y, 0, x, y, k);
+      g.addColorStop(0, '#000');
+      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
+      g.addColorStop(rad2, `hsl(${u} ${s}% ${l}%)`);
+      g.addColorStop(0.3, `hsl(${u + 30} ${s}% ${l / 3}%)`);
+      g.addColorStop(1, `hsl(${u + 90} ${s}% 0%)`);
+      ctx.fillStyle = g;
+      sw = _s * r * 1.8;
+      st = sw / 6;
+      sr = sw - st;
+      ctx.beginPath();
+      ctx.arc(x - sw, y - sw, sr, CIRCLE / 4, 0, true);
+      ctx.lineTo(x - st, y - k);
+      ctx.lineTo(x + st, y - k);
+      ctx.arc(x + sw, y - sw, sr, CIRCLE / 2, CIRCLE / 4, true);
+      ctx.lineTo(x + k, y - st);
+      ctx.lineTo(x + k, y + st);
+      ctx.arc(x + sw, y + sw, sr, -CIRCLE / 4, CIRCLE / 2, true);
+      ctx.lineTo(x + st, y + k);
+      ctx.lineTo(x - st, y + k);
+      ctx.arc(x - sw, y + sw, sr, 0, -CIRCLE / 4, true);
+      ctx.lineTo(x - k, y + st);
+      ctx.lineTo(x - k, y - st);
+      ctx.fill();
+    }
+    delta = time;
+    time = performance.now();
+    //distance += (time - delta) / 1000 * _m; // EREM
+    update_distance(); // REM
+    debug_draw(); // REM
+    tick(step11_draw);
+  };
 </script>
 
 <script type="application/javascript" id="step12">
-step12_init = () => {
-  window.seed = (1 + Math.sqrt(5)) / 2; // REM
-  depth = _fp - _np;
-  for (let i = 0; i < _nb; i++) {
-    x = lcg() - 0.5;
-    y = lcg() - 0.5;
-    stars[i] = new Float32Array(5);
-    stars[i][0] = vx + x * _w;
-    stars[i][1] = vy + y * _w;
-    stars[i][2] = _np + depth / _nb * i;
-    stars[i][3] = (lcg() * 3 - x - y) * 30;
-    stars[i][4] = lcg() * 200 - 50;
-  }
-  let k = _nb;
-  for (let i = 0; i < _t1; i++) {
-    for (let j = 0; j < _t2; j++) {
-      a = CIRCLE / _t2 * j;
-      a += CIRCLE / _t1 * i;
-      r = _w / 8;
-      stars[k] = new Float32Array(5);
-      stars[k][0] = vx + r * Math.cos(a);
-      stars[k][1] = vy + r * Math.sin(a);
-      stars[k][2] = _np + depth / _t1 * i;
-      stars[k][3] = 360 / _t2 * j;
-      stars[k][4] = 50;
-      k++;
+  step12_init = () => {
+    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    depth = _fp - _np;
+    for (let i = 0; i < _nb; i++) {
+      x = lcg() - 0.5;
+      y = lcg() - 0.5;
+      stars[i] = new Float32Array(5);
+      stars[i][0] = vx + x * _w;
+      stars[i][1] = vy + y * _w;
+      stars[i][2] = _np + depth / _nb * i;
+      stars[i][3] = (lcg() * 3 - x - y) * 30;
+      stars[i][4] = lcg() * 200 - 50;
     }
-  }
-};
+    let k = _nb;
+    for (let i = 0; i < _t1; i++) {
+      for (let j = 0; j < _t2; j++) {
+        a = CIRCLE / _t2 * j;
+        a += CIRCLE / _t1 * i;
+        r = _w / 8;
+        stars[k] = new Float32Array(5);
+        stars[k][0] = vx + r * Math.cos(a);
+        stars[k][1] = vy + r * Math.sin(a);
+        stars[k][2] = _np + depth / _t1 * i;
+        stars[k][3] = 360 / _t2 * j;
+        stars[k][4] = 50;
+        k++;
+      }
+    }
+  };
 
-step12_draw = () => {
-  clear();
-  for (let i = 0; i < _nb + _t1 * _t2; i++) {
-    [x, y, z] = get_position(stars[i]);
-    r = _f / z;
-    d = _g * r;
-    if (d < 4) { continue; }
-    x *= r;
-    y *= r;
-    z -= _np;
-    u = stars[i][3] + 180 / depth * (z + distance);
-    s = stars[i][4] * _cs;
-    dof = Math.min(1, z / (depth * _dof));
-    l = (1 - z / depth) * 100 * dof * _o;
-    rad1 = Math.max(_s / _g * dof * 0.95, 0);
-    rad2 = Math.min(_s / _g * (2.05 - dof), 1);
-    g = ctx.createRadialGradient(x, y, 0, x, y, d);
-    g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
-    g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-    g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
-    g.addColorStop(1, `hsl(${u} 0% 0%)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(x - d, y - d, d * 2, d * 2);
-  }
-  delta = time;
-  time = performance.now();
-  if (!pause) { // REM
-  distance += (time - delta) / 1000 * _m;
-  } // REM
-  debug_draw(); // REM
-  tick(step12_draw);
-};
+  step12_draw = () => {
+    clear();
+    for (let i = 0; i < _nb + _t1 * _t2; i++) {
+      [x, y, z] = get_position(stars[i]);
+      r = _f / z;
+      d = _g * r;
+      x *= r;
+      y *= r;
+      z -= _np;
+      u = stars[i][3] + 180 / depth * (z + distance);
+      s = stars[i][4] * _cs;
+      dof = Math.min(1, z / (depth * _dof));
+      l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
+      rad1 = Math.max(_s / _g * dof * 0.95, 0);
+      rad2 = Math.min(_s / _g * (2.05 - dof), 1);
+      g = ctx.createRadialGradient(x, y, 0, x, y, d);
+      g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
+      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
+      g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
+      g.addColorStop(1, `hsl(${u} 0% 0%)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, y - d, d * 2, d * 2);
+    }
+    delta = time;
+    time = performance.now();
+    //distance += (time - delta) / 1000 * _m; // EREM
+    update_distance(); // REM
+    debug_draw(); // REM
+    tick(step12_draw);
+  };
 </script>
 
-<body>
+<body onload="init()">
   <div id="header">
+    <div id="logo"></div>
     <div id="title">
-      starfield<img id="cute_star" src="cute_star.png" /><br>
+      starfield<img id="cute_star" src="img/cute_star.png" /><br>
       <div id="subtitle">an interactive tutorial</div>
     </div>
     <div id="credits">
       christophe resigne<br>
       <a href="https://github.com/chiptune/starfield">github</a><br>
-      <div id="version">v0.9.4</div>
+      <div id="version">v0.7.4</div>
     </div>
   </div>
-  <div id="content"><canvas id="starfield"></canvas></div>
-  <div id="steps"></div>
+  <div id="content">
+    <canvas id="starfield"></canvas>
+  </div>
+  <div id="menu">
+    <div id="steps"></div>
+    <div id="config">
+      <form>
+        <label>motion</label>
+        <input type="checkbox" id="motion" />
+      </form>
+      <form>
+        <label>debug</label>
+        <input type="checkbox" id="debug" />
+      </form>
+    </div>
+  </div>
   <code id="code"></code>
 </body>
 
