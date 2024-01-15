@@ -428,6 +428,7 @@
     ['-', '+', '*', ' / ', '= '].forEach(v => {
       text = text.replaceAll(v, '«op»' + v + '¤');
     });
+    text = text.split('\n').map(l => l.slice(2)).join('\n');
     text = text.replaceAll('  ', '<span class="tab">│ </span>');
     text = text.split('\n').slice(1);
     text.pop();
@@ -435,8 +436,8 @@
     code.textContent = '';
     let n = 0;
     for (let i = 0; i < text.length; i++) {
-      if (text[i].indexOf('// REM') !== -1) { continue; }
-      if (text[i].indexOf('// NREM') !== -1) {
+      if (text[i].endsWith('// REM')) { continue; }
+      if (text[i].endsWith('// NREM')) {
         text[i] = text[i].replace('// NREM', '');
         text[i] = text[i].replace('//', '');
       }
@@ -444,7 +445,7 @@
       line.id = 'line' + n;
       line.className = 'code';
       let txt = '«line»' + n + '¤' + text[i] || '&nbsp;';
-      if (text[i].substr(0, 2) === '//') {
+      if (text[i].startsWith('//')) {
         line.className += ' rem';
         txt = txt.replaceAll('//', '');
       }
@@ -930,7 +931,7 @@
     }
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // EREM
+    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
     debug_draw(); // REM
     tick(step6_draw);
@@ -978,7 +979,7 @@
     }
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // EREM
+    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
     debug_draw(); // REM
     tick(step7_draw);
@@ -1012,7 +1013,7 @@
     }
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // EREM
+    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
     debug_draw(); // REM
     tick(step8_draw);
@@ -1043,7 +1044,7 @@
     }
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // EREM
+    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
     debug_draw(); // REM
     tick(step9_draw);
@@ -1104,7 +1105,7 @@
     }
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // EREM
+    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
     debug_draw(); // REM
     tick(step10_draw);
@@ -1177,7 +1178,7 @@
     }
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // EREM
+    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
     debug_draw(); // REM
     tick(step11_draw);
@@ -1240,7 +1241,7 @@
     }
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // EREM
+    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
     debug_draw(); // REM
     tick(step12_draw);
@@ -1257,7 +1258,7 @@
     <div id="credits">
       christophe resigne<br>
       <a href="https://github.com/chiptune/starfield">github</a><br>
-      <div id="version">v0.7.4</div>
+      <div id="version">v0.7.5</div>
     </div>
   </div>
   <div id="content">
