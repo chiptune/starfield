@@ -3,7 +3,7 @@
   --font-size: 14px;
   --margin: 4px;
   --padding: 8px;
-  --border: 1px;
+  --border: 2px;
   --border-color: #777;
   --radius: 6px;
   --scrollbar-size: 16px;
@@ -67,9 +67,9 @@ body {
   height: 100%;
   overflow: hidden;
   background-color: #222;
-  font-family: "microgramma";
   margin: 0;
   padding: var(--padding);
+  font-family: "input_mono";
 }
 
 div {
@@ -150,12 +150,21 @@ a::before {
   width: 100%;
   height: var(--header-height);
   margin-bottom: var(--padding);
+  font-family: "microgramma";
+}
+
+#logo {
+  float: left;
+  width: var(--header-height);
+  height: var(--header-height);
+  margin-bottom: var(--padding);
+  margin-right: var(--padding);
 }
 
 #title {
   float: left;
   font-size: 32px;
-  line-height: 32px;
+  line-height: 28px;
   text-transform: uppercase;
   color: #fff;
 }
@@ -164,7 +173,7 @@ a::before {
   clear: both;
   float: left;
   font-size: 16px;
-  line-height: 8px;
+  line-height: 16px;
   letter-spacing: -0.5px;
   text-transform: uppercase;
   color: #777;
@@ -196,11 +205,12 @@ a::before {
 #content {
   clear: both;
   float: left;
-  margin-right: calc(var(--padding) + var(--border)*2);
+  margin-right: var(--padding);
+  /*calc(var(--padding) + var(--border)*2);*/
 }
 
 #starfield {
-  border: var(--border) solid var(--border-color);
+  /*border: var(--border) solid var(--border-color);*/
   border-radius: var(--radius);
   margin-bottom: var(--margin);
   cursor: crosshair;
@@ -208,7 +218,6 @@ a::before {
 
 #menu {
   float: left;
-  margin-top: var(--border);
 }
 
 #steps {
@@ -222,8 +231,8 @@ a::before {
   border: var(--border) solid var(--border-color);
   border-radius: calc(var(--button-radius) + var(--padding));
   padding: var(--padding);
-  padding-bottom: calc(var(--padding) - var(--margin));
   margin-top: calc(var(--padding) - var(--margin));
+  padding-bottom: calc(var(--padding) - var(--margin));
   width: calc(100% - var(--padding)*2 - var(--border)*2);
 }
 
@@ -251,7 +260,7 @@ a::before {
 }
 
 #code {
-  float: left;
+  float: right;
   width: var(--code-width);
   height: calc(100vh - var(--header-height) - var(--padding)*3 - var(--border)*2);
   margin-left: var(--padding);
@@ -354,8 +363,12 @@ input[type="checkbox"]:checked {
   background-color: #09b;
 }
 
+input[type="checkbox"]:checked:hover {
+  background-color: #0bd;
+}
+
 input[type="checkbox"]:checked:active {
-  background-color: #057;
+  background-color: #079;
   color: #bbb;
 }
 
@@ -462,6 +475,10 @@ input[type="checkbox"]:checked::before {
   background-color: hsl(320 var(--var-sat) 55%);
 }
 
+.var17 {
+  background-color: hsl(340 var(--var-sat) 55%);
+}
+
 .sy1 {
   color: #79b;
 }
@@ -488,6 +505,10 @@ input[type="checkbox"]:checked::before {
 
 .sy7 {
   color: #59d;
+}
+
+.sy8 {
+  color: #d77;
 }
 
 .op {
@@ -539,10 +560,10 @@ input[type="checkbox"]:checked::before {
 
 @keyframes rainbow {
   0% {
-    background-position: 0% 0%
+    background-position: 0% 0%;
   }
 
   100% {
-    background-position: 400% 0%
+    background-position: 400% 0%;
   }
 }

@@ -9,10 +9,24 @@
 </head>
 
 <script type="application/javascript">
+  const VERSION = [0, 8, 3];
+  /* DOM manipulation shortcuts */
   const _i = id => document.getElementById(String(id));
   const _c = e => document.createElement(String(e));
   const _a = (p, e) => p ? p.appendChild(e) : undefined;
   const _r = e => e ? e.parentNode.removeChild(e) : undefined;
+
+  /* math functions */
+  const clamp = (n, min, max) => Math.max(min, Math.min(n, max));
+  const lerp = (n, min, max) => min + n * (max - min);
+  const normalize = (n, min, max) => (n - min) / (max - min);
+  const lcg = () => {
+    const LCG_MUL = 8121; // multiplier
+    const LCG_INC = 28411; // increment
+    const LCG_MOD = 134456; // modulus (2 ** 3 * 7 ** 5)
+    seed = (LCG_MUL * seed + LCG_INC) % LCG_MOD;
+    return seed / LCG_MOD;
+  };
 
   path = 'starfield';
   root = document.location.origin + '/' + path + '/';
@@ -27,7 +41,7 @@
     ['_s', 'size', 0.01, 1, 0.01, 0.5],
     ['_w', 'space', 8, space * 2, 1, space],
     ['_fp', 'far_p', 8, space * 2, 1, space],
-    ['_np', 'near_p', 1, space * 2, 1, 4],
+    ['_np', 'near_p', 1, space * 2, 1, 8],
     ['_f', 'focale', 1, 1024, 1, space],
     ['_cl', 'color 1', 0.01, 6, 0.01, 3],
     ['_m', 'motion', -64, 64, 1, 8],
@@ -38,10 +52,10 @@
     ['_cs', 'color 2', 0, 1, 0.01, 0.75],
     ['_k', 'spike', 2, 16, 0.1, 6],
     ['_t1', 'tunnel 1', 0, 128, 1, 36],
-    ['_t2', 'tunnel 2', 0, 64, 1, 12]
+    ['_t2', 'tunnel 2', 0, 64, 1, 12],
   ];
   steps = [
-    ['intro', null, [9, 14, 21], [6]],
+    ['intro', null, [6, 11, 19], [3]],
     ['points', [0, 1, 2], [3, 4, 15], [20]],
     ['depth', [3, 4], [6, 17], [1]],
     ['focale', [5], [5, 8]],
@@ -53,7 +67,7 @@
     ['blending', null, [1, 27, 28, 29, 30, 31, 32]],
     ['color #2', [12], [9, 10, 23, 24, 30, 31, 32, 33, 45]],
     ['spikes', [13], [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]],
-    ['tunnel', [14, 15], [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]]
+    ['tunnel', [14, 15], [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]],
   ];
   ox = 0;
   oy = 0;
@@ -65,9 +79,11 @@
   mx = 0;
   my = 0;
   pause = Boolean(url.get('pause'));
+  overlay = Boolean(url.get('overlay'));
   debug = Boolean(url.get('debug'));
   drag = false;
   drago = false;
+  wheel = false;
   star_n = 0;
   time = performance.now();
   delta = performance.now();
@@ -77,23 +93,28 @@
   rtmax = 120;
   rt = new Float32Array(rtc);
 
-  const favicon = () => {
+  const generate_favicon = () => {
+    const dpr = window.devicePixelRatio;
     const canvas = _c('canvas');
-    canvas.width = 32;
-    canvas.height = 32;
+    const w = 32 * dpr;
+    const h = 32 * dpr;
+    const r = 6 * dpr;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d', { alpha: false });
+    squircle(ctx, 0, 0, w, h, r);
+    ctx.clip();
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 32, 32);
-    for (let y = 0; y < 32; y++) {
-      const x = Math.round(Math.random() * 31);
+    ctx.fill();
+    ctx.lineWidth = 4 * dpr;
+    ctx.strokeStyle = '#777';
+    ctx.stroke();
+    for (let y = 4 * dpr; y < h - 4 * dpr; y += dpr) {
+      const x = 4 * dpr + Math.round(Math.random() * (w - 8 * dpr));
       const c = Math.round(Math.random() * 255.999).toString(16);
       ctx.fillStyle = '#' + c + c + c;
-      ctx.fillRect(x - 1, y - 1, 2, 2);
+      ctx.fillRect(x - dpr, y - dpr, 2 * dpr, 2 * dpr);
     }
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#555';
-    ctx.rect(1, 1, 30, 30);
-    ctx.stroke();
     const icon = _c('link');
     icon.rel = 'icon';
     icon.type = 'image/png';
@@ -101,26 +122,227 @@
     _a(document.head, icon);
   };
 
-  const lcg = () => {
-    const LCG_MUL = 8121; // multiplier
-    const LCG_INC = 28411; // increment
-    const LCG_MOD = 134456; // modulus (2 ** 3 * 7 ** 5)
-    seed = (LCG_MUL * seed + LCG_INC) % LCG_MOD;
-    return seed / LCG_MOD;
+  const generate_logo = () => {
+    const dpr = window.devicePixelRatio;
+    const size = _i('logo').offsetWidth;
+    const canvas = _c('canvas');
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx = canvas.getContext('2d', { alpha: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.lineCap = 'round';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    //ctx.fillStyle = '#0f0';
+    //ctx.fillRect(0, 0, size, size);
+    /* border */
+    squircle(ctx, 1, 1, size - 2, size - 2, 10);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#777';
+    ctx.stroke();
+    /* star */
+    squircle(ctx, 4, 4, size - 8, size - 8, 8);
+    ctx.clip();
+    ctx.fillStyle = '#fff';
+    spike(ctx, size * 0.4, size * 0.6, size * 0.6, size * 0.03);
+    ctx.fill();
+    spike(ctx, size * 0.7, size * 0.3, size * 0.4, 0);
+    ctx.fill();
+    _i('logo').src = canvas.toDataURL();
   };
 
+  const squircle = (ctx, x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.arc(x + r, y + r, r, CIRCLE / 2, CIRCLE / 4 * 3);
+    ctx.lineTo(x + w - r, y);
+    ctx.arc(x + w - r, y + r, r, CIRCLE / 4 * 3, CIRCLE);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arc(x + w - r, y + h - r, r, 0, CIRCLE / 4);
+    ctx.lineTo(x + r, y + h);
+    ctx.arc(x + r, y + h - r, r, CIRCLE / 4, CIRCLE / 2);
+    ctx.closePath();
+  };
+
+  const spike = (ctx, x, y, r, t) => {
+    const sw = r * 0.4;
+    const sr = sw - t;
+    ctx.beginPath();
+    ctx.arc(x - sw, y - sw, sr, CIRCLE / 4, 0, true);
+    ctx.lineTo(x - t, y - r);
+    ctx.lineTo(x + t, y - r);
+    ctx.arc(x + sw, y - sw, sr, CIRCLE / 2, CIRCLE / 4, true);
+    ctx.lineTo(x + r, y - t);
+    ctx.lineTo(x + r, y + t);
+    ctx.arc(x + sw, y + sw, sr, -CIRCLE / 4, CIRCLE / 2, true);
+    ctx.lineTo(x + t, y + r);
+    ctx.lineTo(x - t, y + r);
+    ctx.arc(x - sw, y + sw, sr, 0, -CIRCLE / 4, true);
+    ctx.lineTo(x - r, y + t);
+    ctx.lineTo(x - r, y - t);
+    ctx.closePath();
+  };
+
+  const generate_cute_star = (size) => {
+    const dpr = window.devicePixelRatio;
+    const canvas = _c('canvas');
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx = canvas.getContext('2d', { alpha: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.lineCap = 'round';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    /* background */
+    //ctx.strokeStyle = '#0f0';
+    //ctx.strokeRect(0, 0, size, size);
+    /* star */
+    ctx.translate(size / 2, size / 2);
+    ctx.rotate(-CIRCLE / 100);
+    const n = 5;
+    const r1 = size * 0.5;
+    const r2 = size * 0.34;
+    let a = -CIRCLE / 4 - CIRCLE / n / 2;
+    let b = CIRCLE / n / 7;
+    ctx.beginPath();
+    ctx.lineTo(r2 * Math.cos(a), r2 * Math.sin(a));
+    for (let i = 0; i < n; i++) {
+      a += CIRCLE / n / 2;
+      const x1 = r1 * Math.cos(a);
+      const y1 = r1 * Math.sin(a);
+      const c1x = r1 * Math.cos(a - b);
+      const c1y = r1 * Math.sin(a - b);
+      const c2x = r1 * Math.cos(a + b);
+      const c2y = r1 * Math.sin(a + b);
+      a += CIRCLE / n / 2;
+      const x2 = r2 * Math.cos(a);
+      const y2 = r2 * Math.sin(a);
+      ctx.quadraticCurveTo(c1x, c1y, x1, y1);
+      ctx.quadraticCurveTo(c2x, c2y, x2, y2);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#ec0';
+    ctx.fill();
+    /* eyes */
+    let x = size * 0.14;
+    let y = size * 0.05;
+    const eye = size * 0.07;
+    const lash = size * 0.05;
+    const el = eye * 0.3;
+    ctx.beginPath();
+    ctx.arc(-x, -y, eye, 0, CIRCLE);
+    ctx.moveTo(x + eye, y);
+    ctx.arc(x, -y, eye, 0, CIRCLE);
+    ctx.fillStyle = '#539';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-x - lash, -y - lash * 1.4, lash, CIRCLE / 4, CIRCLE / 4 + CIRCLE / 10);
+    ctx.moveTo(x + lash, -y);
+    ctx.arc(x + lash, -y - lash * 1.4, lash, CIRCLE / 4, CIRCLE / 4 - CIRCLE / 10, true);
+    ctx.lineWidth = size * 0.04;
+    ctx.strokeStyle = '#539';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(-x + el, -y - el, eye / 3, 0, CIRCLE);
+    ctx.moveTo(x + eye, y);
+    ctx.arc(x + el, -y - el, eye / 3, 0, CIRCLE);
+    ctx.fillStyle = '#97d';
+    ctx.fill();
+    /* mouth */
+    ctx.beginPath();
+    ctx.arc(0, size * 0.08, size * 0.06, 0, CIRCLE / 2);
+    ctx.lineWidth = size * 0.04;
+    ctx.strokeStyle = '#846';
+    ctx.stroke();
+    /* blush */
+    x = size * 0.2;
+    y = size * 0.1;
+    const blush1 = size * 0.11;
+    const blush2 = size * 0.08;
+    ctx.beginPath();
+    ctx.ellipse(-x, y, blush1, blush2, 0, 0, CIRCLE);
+    ctx.moveTo(x + blush1, y);
+    ctx.ellipse(x, y, blush1, blush2, 0, 0, CIRCLE);
+    ctx.fillStyle = '#e8b';
+    ctx.fill();
+    return canvas;
+  };
+
+  const generate_overlay = () => {
+    ocvs = _c('canvas');
+    ocvs.width = w * dpr;
+    ocvs.height = h * dpr;
+    octx = ocvs.getContext('2d', { alpha: false });
+    octx.imageSmoothingEnabled = true;
+    octx.imageSmoothingQuality = 'high';
+    octx.lineCap = 'round';
+    octx.setTransform(1, 0, 0, 1, 0, 0);
+    octx.scale(dpr, dpr);
+    /* background */
+    octx.fillStyle = `rgb(0,0,0)`;
+    octx.fillRect(0, 0, w, h);
+    /* scanline */
+    const dot = 1;
+    octx.setLineDash([0, dot * 3]);
+    //octx.lineWidth = dot * 1.2;
+    //overlay_rgb(dot, 64, 0.4);
+    octx.lineWidth = dot;
+    overlay_rgb(dot, 96, 1);
+  };
+
+  const overlay_rgb = (dot, c, alpha) => {
+    /* R */
+    octx.strokeStyle = `rgba(255.999,${c},${c},${alpha})`;
+    y = dot / 2;
+    for (let i = 0; i < h; i++) {
+      octx.beginPath();
+      octx.moveTo(0, y);
+      octx.lineTo(w, y);
+      octx.lineDashOffset = i % 2 === 0 ? 0 : dot * 1.5;
+      octx.stroke();
+      y += dot;
+    }
+    /* G */
+    octx.strokeStyle = `rgba(${c},255.999,${c},${alpha})`;
+    y = dot / 2;
+    for (let i = 0; i < h; i++) {
+      octx.beginPath();
+      octx.moveTo(0, y);
+      octx.lineTo(w, y);
+      octx.lineDashOffset = dot + (i % 2 === 0 ? 0 : dot * 1.5);
+      octx.stroke();
+      y += dot;
+    }
+    /* B */
+    octx.strokeStyle = `rgba(${c},${c},255.999,${alpha})`;
+    y = dot / 2;
+    for (let i = 0; i < h; i++) {
+      octx.beginPath();
+      octx.moveTo(0, y);
+      octx.lineTo(w, y);
+      octx.lineDashOffset = dot * 2 + (i % 2 === 0 ? 0 : dot * 1.5);
+      octx.stroke();
+      y += dot;
+    }
+  }
+
   function mousedown(e) {
-    window.mx = e.offsetX - sf.offsetLeft - sf.width / 2;
-    window.my = e.offsetY - sf.offsetTop - sf.height / 2;
+    window.mx = e.pageX - sf.offsetLeft - sf.width / 2;
+    window.my = e.pageY - sf.offsetTop - sf.height / 2;
     if (!window.shift) {
       window.drag = true;
     } else {
       window.drago = true;
     }
     sf.style.cursor = 'grab';
-    if (window.pause) {
-      start();
-    }
+    start();
   }
 
   function mouseup() {
@@ -142,43 +364,52 @@
     window.px = 0;
     window.py = 0;
     _i('starfield').style.cursor = 'crosshair';
-    if (window.pause) {
-      single_frame();
-      start();
-    }
     set_url();
+    single_frame();
   }
 
   function mousemove(e) {
-    x = (e.offsetX - window.mx) - sf.offsetLeft - sf.width / 2;
-    y = (e.offsetY - window.my) - sf.offsetTop - sf.height / 2;
+    x = (e.pageX - window.mx) - sf.offsetLeft - sf.width / 2;
+    y = (e.pageY - window.my) - sf.offsetTop - sf.height / 2;
     if (window.drag || window.drago) {
       window.px = x;
       window.py = y;
-      start();
     }
   }
 
   function mousewheel(e) {
     e.preventDefault();
+    clearTimeout(window.timeout);
+    if (!window.wheel) {
+      window.wheel = true;
+      start();
+    }
     window.distance -= e.deltaY / 2 ** 12 * window._f;
     window.distance = window.distance % (window.depth * 2);
-    start();
+    window.timeout = setTimeout(() => {
+      window.wheel = false;
+      set_url();
+    }, 250);
   }
 
   const init = () => {
-    favicon();
+    generate_favicon();
+    generate_logo();
+    cute_star = generate_cute_star(128);
+    _i('cute_star').src = cute_star.toDataURL();
+    _i('version').textContent = `v${VERSION.join('.')}`;
+    /* init canvas */
     dpr = window.devicePixelRatio;
     sf = _i('starfield');
     ctx = sf.getContext('2d', { alpha: false });
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.lineCap = 'round';
+    /* steps */
     vars.forEach(v => {
-      window[v[0]] = Number(url.get(v[0]) || v[5]);
+      window[v[0]] = Number(url.get(v[0].slice(1)) || v[5]);
+      //window[v[0]] = v[5];
     });
-    _i('motion').addEventListener('change', () => { set_pause(!pause); });
-    _i('debug').addEventListener('change', () => { set_debug(!debug); });
     steps.forEach((v, i) => {
       const btn = _c('input');
       btn.type = 'button';
@@ -188,6 +419,10 @@
       _a(_i('steps'), btn);
       btn.addEventListener('click', () => { run(i); });
     });
+    /* events */
+    _i('motion').addEventListener('change', () => { set_pause(!pause); });
+    _i('overlay').addEventListener('change', () => { set_overlay(!overlay); });
+    _i('debug').addEventListener('change', () => { set_debug(!debug); });
     addEventListener('resize', resize);
     addEventListener('keydown', keydown);
     addEventListener('keyup', keyup);
@@ -196,9 +431,11 @@
     sf.addEventListener('mousedown', mousedown);
     addEventListener('mouseup', mouseup);
     sf.addEventListener('mousewheel', mousewheel);
+    /* start */
     step12_init();
     resize();
     set_pause(pause);
+    set_overlay(overlay);
     set_debug(debug);
     run(step);
   };
@@ -224,14 +461,14 @@
   const resize = () => {
     const menu = _i('menu');
     const code = _i('code');
-    let style = getComputedStyle(document.body);
+    const style = getComputedStyle(document.body);
     const padding = parseInt(style.getPropertyValue('--padding'));
     const margin = parseInt(style.getPropertyValue('--margin'));
     const border = parseInt(style.getPropertyValue('--border'));
     const var_h = parseInt(style.getPropertyValue('--slider-height'));
     const var_m = parseInt(style.getPropertyValue('--slider-margin'));
-    w = innerWidth - padding * 4 - border * 2 - code.offsetWidth - menu.offsetWidth;
-    h = innerHeight - padding * 4 - border * 2 - _i('header').offsetHeight;
+    w = innerWidth - padding * 4 - code.offsetWidth - menu.offsetWidth;
+    h = innerHeight - padding * 4 - _i('header').offsetHeight;
     h -= var_h * vars.length + var_m * (vars.length - 1);
     _i('content').style.width = w + 'px';
     ox = w / 2 + Number(url.get('ox'));
@@ -243,6 +480,7 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     ctx.translate(ox, oy);
+    generate_overlay();
     single_frame();
   };
 
@@ -309,23 +547,24 @@
     document.title = title;
     let params = [
       step > 0 ? 'step=' + step : null,
-      _nb !== vars[0][5] ? '_nb=' + _nb : null,
+      _nb !== vars[0][5] ? 'nb=' + _nb : null,
       vx !== 0 ? 'x=' + vx : null,
       vy !== 0 ? 'y=' + vy : null,
       ox !== w / 2 ? 'ox=' + (ox - w / 2) : null,
       oy !== h / 2 ? 'oy=' + (oy - h / 2) : null,
       distance !== 232 ? 'distance=' + Math.round(distance) : null,
       pause ? 'pause=true' : null,
+      overlay ? 'overlay=true' : null,
       debug ? 'debug=true' : null,
     ];
-    params = params.filter(p => p !== null && Number(p) !== NaN);
-    history.pushState({ data: '' }, title, root + (params.length > 0 ? '?' : '') + params.join('&'));
+    params = params.filter(p => p !== null);
+    history.replaceState({ data: '' }, title, root + (params.length > 0 ? '?' : '') + params.join('&'));
   };
 
   const update = e => {
     stop();
     const v = steps[step][1];
-    const range = e?.srcElement || _i('range' + (v ? v[0] : 2));
+    const range = e?.srcElement || _i('range' + (v ? v[0] : '?'));
     if (range) {
       window[range.variable] = Number(range.value);
       const value = _i('value' + range.n);
@@ -340,7 +579,7 @@
   };
 
   const range_color = range => {
-    const p = (range.value - range.min) / (range.max - range.min);
+    const p = normalize(range.value, range.min, range.max);
     const r = 64;
     const g = 80;
     const b = 128;
@@ -350,26 +589,24 @@
   };
 
   const tick = fn => {
-    stop();
-    if (step > 5 && (!window.pause || window.drag || window.drago)) {
-      window.rid = requestAnimationFrame(fn);
-    }
     rt[rti] = Math.min(1000 / (time - delta), rtmax);
     rti = (rti + 1) % rtc;
+    if (window.drag || window.drago || window.wheel || (step > 5 && !window.pause)) {
+      window.rid = requestAnimationFrame(fn);
+    }
   };
 
   const single_frame = () => {
-    if (!pause) { return; }
-    const opacity = _o;
-    _o = 1;
-    window[`step${window.step}_draw`]();
-    _o = opacity;
+    const opacity = window['_o'];
+    window['_o'] = 1;
+    start();
+    window['_o'] = opacity;
   };
 
   const start = () => {
     stop();
-    const fn = window[`step${window.step}_draw`];
-    window.rid = requestAnimationFrame(fn);
+    window.time = performance.now();
+    window[`step${window.step}_draw`]();
   };
 
   const stop = () => {
@@ -378,20 +615,28 @@
   };
 
   const set_pause = state => {
-    pause = state;
-    _i('motion').checked = !pause;
+    window.pause = state;
+    _i('motion').checked = !window.pause;
     set_url();
-    time = performance.now();
+    if (window.pause) {
+      single_frame();
+    } else {
+      start();
+    }
+  };
+
+  const set_overlay = state => {
+    window.overlay = state;
+    _i('overlay').checked = window.overlay;
+    set_url();
     single_frame();
-    start();
   };
 
   const set_debug = state => {
-    debug = state;
-    _i('debug').checked = debug;
+    window.debug = state;
+    _i('debug').checked = window.debug;
     set_url();
     single_frame();
-    start();
   };
 
   const code2text = () => {
@@ -416,11 +661,14 @@
     ['Math', 'Float32Array', 'requestAnimationFrame'].forEach(v => {
       text = text.replaceAll(v, '«sy5»' + v + '¤');
     });
-    ['stars', 'distance', 'depth'].forEach(v => {
+    ['ctx', 'stars', 'distance', 'depth', 'dof'].forEach(v => {
       text = text.replaceAll(v, '«sy6»' + v + '¤');
     });
     ['THRESHOLD', 'CIRCLE'].forEach(v => {
       text = text.replaceAll(v, '«sy7»' + v + '¤');
+    });
+    ['init', 'draw', 'clear', 'get_position'].forEach(v => {
+      text = text.replaceAll(v, '«sy8»' + v + '¤');
     });
     vars.map(v => v[0]).forEach((v, i) => {
       text = text.replaceAll(v, '«var var' + i + '»' + window[v] + '¤');
@@ -477,30 +725,30 @@
     key = e.key;
     let id;
     switch (e.key) {
+      case 'Escape':
+      case 'd':
+        set_debug(!debug);
+        break;
+      case 'o':
+        set_overlay(!overlay);
+        break;
       case ' ':
       case 'p':
         set_pause(!pause);
         break;
       case 'ArrowUp':
-        id = (step + steps.length - 1) % steps.length;
-        _i('step' + id + '_btn').click();
+        run((step + steps.length - 1) % steps.length);
         break;
       case 'ArrowDown':
-        id = (step + 1) % steps.length;
-        _i('step' + id + '_btn').click();
+        run((step + 1) % steps.length);
         break;
       case 'ArrowLeft':
         star_n = (star_n + _nb - 1) % _nb;
         single_frame();
-        start();
         break;
       case 'ArrowRight':
         star_n = (star_n + 1) % _nb;
         single_frame();
-        start();
-        break;
-      case 'Escape':
-        set_debug(!debug);
         break;
       case 'c':
         ox = w / 2;
@@ -513,19 +761,15 @@
         set_url();
         step12_init();
         single_frame();
-        start();
         break;
       case 'r':
-        stop();
         reset();
         set_url();
         code2text();
         step12_init();
         single_frame();
-        start();
         break;
     }
-    //console.log(e.key);
   };
 
   const keyup = e => {
@@ -563,12 +807,22 @@
     }
   };
 
+  overlay_draw = () => {
+    if (!overlay) { return; }
+    x = -ox - (drago ? px : 0);
+    y = -oy - (drago ? py : 0);
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = _o;
+    ctx.drawImage(ocvs, 0, 0, w * dpr, h * dpr, x, y, w * dpr, h * dpr);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
   debug_draw = () => {
     if (!debug) { return; }
-    const m = 2;
+    const m = 4;
     ctx.globalCompositeOperation = 'source-over';
-    //ctx.lineCap = 'round';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.textAlign = 'center';
     ctx.font = '16px/16px hud';
     ctx.strokeStyle = '#5c0';
@@ -609,7 +863,7 @@
       s2 = _w * r2 + m * 2;
     }
     if (step === 0) {
-      ctx.fillText('HEY!', 48, -40);
+      //ctx.fillText('HEY!', 48, -40);
     } else if (step === 1) {
       ctx.strokeRect(x1, y1, s1, s1);
       ctx.fillText(_w + '×' + _w, x1 + s1 / 2, y1 - 5);
@@ -630,13 +884,13 @@
     }
     if (step > 1) {
       ctx.beginPath();
-      ctx.moveTo(x0 - m * 2, y0);
-      ctx.lineTo(x0 + m * 2, y0);
-      ctx.moveTo(x0, y0 - m * 2);
-      ctx.lineTo(x0, y0 + m * 2);
+      ctx.moveTo(x0 - m, y0);
+      ctx.lineTo(x0 + m, y0);
+      ctx.moveTo(x0, y0 - m);
+      ctx.lineTo(x0, y0 + m);
       ctx.stroke();
-      ctx.lineDashOffset = 8;
-      ctx.setLineDash([0.2, 8]);
+      ctx.lineDashOffset = 2;
+      ctx.setLineDash([2, 8]);
       ctx.beginPath();
       ctx.moveTo(x0, y0);
       ctx.lineTo(x1 + s1 / 2, y1 + s1 / 2);
@@ -648,8 +902,11 @@
       ctx.beginPath();
       ctx.arc(x2 + s2 / 2, y2 + s2 / 2, _w / 128 * r2, 0, CIRCLE);
       ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, 2, 0, CIRCLE);
+      ctx.stroke();
       ctx.lineDashOffset = 8;
-      ctx.setLineDash([4, 8]);
+      ctx.setLineDash([8, 8]);
       ctx.beginPath();
       ctx.moveTo(x1 + s1 / 2, y1 + s1 / 2);
       ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
@@ -681,7 +938,7 @@
       y1 = (vy + y - _w / 2) * r1;
       s1 = _w * r1;
       ctx.beginPath();
-      ctx.rect(x1, y1, s1, s1);
+      ctx.rect(x1 - 2, y1 - 2, s1 + 4, s1 + 4);
       if (step === 12) {
         ctx.moveTo(x1 + s1 / 2 + s1 / 8, y1 + s1 / 2);
         ctx.arc(x1 + s1 / 2, y1 + s1 / 2, s1 / 8, 0, CIRCLE);
@@ -722,19 +979,24 @@
     y = (drago ? -py : 0) - oy + 8;
     ctx.strokeStyle = '#d90';
     ctx.fillStyle = '#d90';
-    ctx.strokeRect(x - rtc, y, rtc, rth);
+    squircle(ctx, x - rtc, y, rtc, rth, 3);
+    ctx.stroke();
+    ctx.save();
+    ctx.clip();
     ctx.beginPath();
     let rtm = 0;
     for (let i = 0; i < rtc; i++) {
       let k = rti + i;
       if (k > rtc - 1) { k -= rtc; }
       const v = rth / rtmax * rt[k];
-      ctx.rect(x - rtc - 0.75 + i, y + rth - v - 0.75, 1.5, 1.5);
+      ctx.rect(x - rtc - 1 + i, y + rth - v - 1, 2, 2);
       if (i > rtc - 33) { rtm += rt[k]; }
     }
     ctx.fill();
+    ctx.restore();
     ctx.textAlign = 'right';
     ctx.fillText(Math.floor(rtm / 32), x - m, y + m + 12);
+    /* distance */
     ctx.fillText(Math.round(distance) + ' LY', x, y + h - 16);
   };
 </script>
@@ -745,11 +1007,19 @@
     ctx.fillStyle = '#000';
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.font = 'normal 20px/100% sans-serif';
-    ctx.fillText('ᕕ( ᐛ )ᕗ', 0, -16);
+    //ctx.textAlign = 'center'; // REM
+    //ctx.fillStyle = '#fff'; // REM
+    //ctx.font = 'normal 20px/100% sans-serif'; // REM
+    //ctx.fillText('ᕕ( ᐛ )ᕗ', 0, -16); // REM
+    /* display a cute star here */
+    x = px + (drago ? -px : 0) - _w / 4; // REM
+    y = py + (drago ? -py : 0) - _w / 4; // REM
+    ctx.drawImage(cute_star, 0, 0, 128 * dpr, 128 * dpr, x, y, _w / 2, _w / 2); // REM
+    overlay_draw(); // REM
     debug_draw(); // REM
+    delta = time; // REM
+    time = performance.now(); // REM
+    tick(step0_draw); // REM
   };
 
   // # README #
@@ -759,9 +1029,10 @@
 
   // # SHORTCUTS #
   // r: reset all parameters
-  // c: reset the stars position
-  // esc: debug mode on/off
-  // space: animation play/pause
+  // c: reset stars origin
+  // p/space: animation play/pause
+  // o: overlay on/off
+  // d/esc: debug mode on/off
   // up/down: cycle through steps
 
   // # SOURCE #
@@ -793,9 +1064,10 @@
       //ctx.arc(x, y, _s * 2, 0, CIRCLE); // NREM
       ctx.fill();
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time; // REM
     time = performance.now(); // REM
-    debug_draw(); // REM
     tick(step1_draw); // REM
   };
 
@@ -827,9 +1099,10 @@
       ctx.arc(x / z, y / z, _s * 2, 0, CIRCLE);
       ctx.fill();
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time; // REM
     time = performance.now(); // REM
-    debug_draw(); // REM
     tick(step2_draw); // REM
   };
 </script>
@@ -849,9 +1122,10 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time; // REM
     time = performance.now(); // REM
-    debug_draw(); // REM
     tick(step3_draw); // REM
   };
 </script>
@@ -873,9 +1147,10 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time; // REM
     time = performance.now(); // REM
-    debug_draw(); // REM
     tick(step4_draw); // REM
   };
 </script>
@@ -897,9 +1172,10 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time; // REM
     time = performance.now(); // REM
-    debug_draw(); // REM
     tick(step5_draw); // REM
   };
 
@@ -929,11 +1205,12 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
-    debug_draw(); // REM
+    //distance += (time - delta) / 1000 * _m; // NREM
     tick(step6_draw);
   };
 
@@ -977,11 +1254,12 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
-    debug_draw(); // REM
+    //distance += (time - delta) / 1000 * _m; // NREM
     tick(step7_draw);
   };
 </script>
@@ -1011,11 +1289,12 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
-    debug_draw(); // REM
+    //distance += (time - delta) / 1000 * _m; // NREM
     tick(step8_draw);
   };
 </script>
@@ -1042,11 +1321,12 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
-    debug_draw(); // REM
+    //distance += (time - delta) / 1000 * _m; // NREM
     tick(step9_draw);
   };
 
@@ -1103,11 +1383,12 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
-    debug_draw(); // REM
+    //distance += (time - delta) / 1000 * _m; // NREM
     tick(step10_draw);
   };
 
@@ -1176,11 +1457,12 @@
       ctx.lineTo(x - k, y - st);
       ctx.fill();
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
-    debug_draw(); // REM
+    //distance += (time - delta) / 1000 * _m; // NREM
     tick(step11_draw);
   };
 </script>
@@ -1239,26 +1521,27 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
+    overlay_draw(); // REM
+    debug_draw(); // REM
     delta = time;
     time = performance.now();
-    //distance += (time - delta) / 1000 * _m; // NREM
     update_distance(); // REM
-    debug_draw(); // REM
+    //distance += (time - delta) / 1000 * _m; // NREM
     tick(step12_draw);
   };
 </script>
 
 <body onload="init()">
   <div id="header">
-    <div id="logo"></div>
+    <img id="logo" />
     <div id="title">
-      starfield<img id="cute_star" src="img/cute_star.png" /><br>
+      starfield<img id="cute_star" /><br>
       <div id="subtitle">an interactive tutorial</div>
     </div>
     <div id="credits">
       christophe resigne<br>
       <a href="https://github.com/chiptune/starfield">github</a><br>
-      <div id="version">v0.7.5</div>
+      <div id="version"></div>
     </div>
   </div>
   <div id="content">
@@ -1270,6 +1553,10 @@
       <form>
         <label>motion</label>
         <input type="checkbox" id="motion" />
+      </form>
+      <form>
+        <label>overlay</label>
+        <input type="checkbox" id="overlay" />
       </form>
       <form>
         <label>debug</label>
