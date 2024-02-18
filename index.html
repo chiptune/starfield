@@ -4,17 +4,28 @@
 <head>
   <title>starfield</title>
   <meta charset="utf-8" />
-  <meta name="robots" content="follow index archive">
-  <link rel="stylesheet" type="text/css" href="starfield.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="follow index archive" />
+  <meta name="author" content="REZ ᕕ( ᐛ )ᕗ" />
+  <meta name="description" content="interactive code tutorial" />
+  <link rel="preload" href="starfield.css" as="style" type="text/css" />
+  <link rel="preload" href="fonts/microgramma.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+  <link rel="preload" href="fonts/input_mono.ttf" as="font" type="font/ttf" crossorigin="anonymous" />
+  <link rel="preload" href="fonts/hud.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+  <link rel="stylesheet" href="starfield.css" />
 </head>
 
 <script type="application/javascript">
-  const VERSION = [0, 8, 3];
+  const VERSION = [0, 1, 0];
+
   /* DOM manipulation shortcuts */
   const _i = id => document.getElementById(String(id));
+  const _t = t => document.getElementsByTagName(String(t));
   const _c = e => document.createElement(String(e));
   const _a = (p, e) => p ? p.appendChild(e) : undefined;
   const _r = e => e ? e.parentNode.removeChild(e) : undefined;
+
+  const NBSP = '\u00A0';
 
   /* math functions */
   const clamp = (n, min, max) => Math.max(min, Math.min(n, max));
@@ -92,6 +103,9 @@
   rth = 56;
   rtmax = 120;
   rt = new Float32Array(rtc);
+
+  const font = new FontFace('hud', 'url(fonts/hud.woff2)');
+  font.load().then(function (font) { document.fonts.add(font); });
 
   const generate_favicon = () => {
     const dpr = window.devicePixelRatio;
@@ -438,6 +452,7 @@
     set_overlay(overlay);
     set_debug(debug);
     run(step);
+    _i('root').style.visibility = 'visible';
   };
 
   const reset = () => {
@@ -459,20 +474,16 @@
   };
 
   const resize = () => {
-    const menu = _i('menu');
-    const code = _i('code');
     const style = getComputedStyle(document.body);
     const padding = parseInt(style.getPropertyValue('--padding'));
     const margin = parseInt(style.getPropertyValue('--margin'));
     const border = parseInt(style.getPropertyValue('--border'));
     const var_h = parseInt(style.getPropertyValue('--slider-height'));
     const var_m = parseInt(style.getPropertyValue('--slider-margin'));
-    w = innerWidth - padding * 4 - code.offsetWidth - menu.offsetWidth;
-    h = innerHeight - padding * 4 - _i('header').offsetHeight;
-    h -= var_h * vars.length + var_m * (vars.length - 1);
-    _i('content').style.width = w + 'px';
+    w = sf.offsetWidth;
+    h = sf.offsetHeight;
     ox = w / 2 + Number(url.get('ox'));
-    oy = h / 2 + Number(url.get('oy'));
+    oy = h / 2 - Number(url.get('oy'));
     sf.width = w * dpr;
     sf.height = h * dpr;
     sf.style.width = w + 'px';
@@ -500,7 +511,7 @@
       return;
     }
     btn.disabled = true;
-    const content = _i('content');
+    const variables = _i('variables');
     let n = 0;
     for (let i = 0; i <= step; i++) {
       const v = steps[i][1];
@@ -510,9 +521,10 @@
         const slider = _c('form');
         slider.id = 'slider' + n;
         slider.className = 'slider';
-        _a(content, slider);
+        _a(variables, slider);
         const label = _c('label');
         label.id = 'label' + n;
+        label.setAttribute('for', 'range' + n);
         label.textContent = text;
         label.style.float = 'left';
         _a(slider, label);
@@ -531,7 +543,7 @@
         const value = _c('output');
         value.id = 'value' + n;
         value.textContent = range.value;
-        value.className = 'val var' + n;
+        value.className = 'var var' + n;
         _a(slider, value);
         n++;
       }
@@ -551,7 +563,7 @@
       vx !== 0 ? 'x=' + vx : null,
       vy !== 0 ? 'y=' + vy : null,
       ox !== w / 2 ? 'ox=' + (ox - w / 2) : null,
-      oy !== h / 2 ? 'oy=' + (oy - h / 2) : null,
+      oy !== h / 2 ? 'oy=' + -(oy - h / 2) : null, // Y up!
       distance !== 232 ? 'distance=' + Math.round(distance) : null,
       pause ? 'pause=true' : null,
       overlay ? 'overlay=true' : null,
@@ -673,14 +685,14 @@
     vars.map(v => v[0]).forEach((v, i) => {
       text = text.replaceAll(v, '«var var' + i + '»' + window[v] + '¤');
     });
-    ['-', '+', '*', ' / ', '= '].forEach(v => {
+    ['-', '+', '*', ' / '].forEach(v => {
       text = text.replaceAll(v, '«op»' + v + '¤');
     });
     text = text.split('\n').map(l => l.slice(2)).join('\n');
-    text = text.replaceAll('  ', '<span class="tab">│ </span>');
+    text = text.replaceAll('  ', '«tab»│ ¤');
     text = text.split('\n').slice(1);
     text.pop();
-    const code = _i('code');
+    const code = _t('code')[0];
     code.textContent = '';
     let n = 0;
     for (let i = 0; i < text.length; i++) {
@@ -691,16 +703,19 @@
       }
       const line = _c('div');
       line.id = 'line' + n;
-      line.className = 'code';
-      let txt = '«line»' + n + '¤' + text[i] || '&nbsp;';
+      line.className = 'line';
+      let txt = '«nbr»' + n + '¤' + text[i] || '&nbsp;';
       if (text[i].startsWith('//')) {
         line.className += ' rem';
         txt = txt.replaceAll('//', '');
       }
-      txt = txt.replaceAll('«', '<span class="');
+      txt = txt.replaceAll('«', '<div class="');
       txt = txt.replaceAll('»', '">');
-      txt = txt.replaceAll('¤', '</span>');
+      txt = txt.replaceAll('¤', '</div>');
       line.innerHTML = txt;
+      line.childNodes.forEach(e => {
+        e.textContent = String(e.textContent).replace(' ', NBSP);
+      });
       _a(code, line);
       n++;
     }
@@ -708,14 +723,14 @@
     for (let i = 0; i < hl.length; i++) {
       const line = _i('line' + hl[i])
       if (line) {
-        line.className = 'code hl1';
+        line.className = 'line hl1';
       }
     }
     hl = steps[step][3] || [];
     for (let i = 0; i < hl.length; i++) {
       const line = _i('line' + hl[i])
       if (line) {
-        line.className = 'code hl2';
+        line.className = 'line hl2';
       }
     }
   };
@@ -727,7 +742,12 @@
     switch (e.key) {
       case 'Escape':
       case 'd':
-        set_debug(!debug);
+        if (shift) {
+          const root = _i('root');
+          root.className = root.className === '' ? 'debug' : '';
+        } else {
+          set_debug(!debug);
+        }
         break;
       case 'o':
         set_overlay(!overlay);
@@ -916,7 +936,7 @@
     /* origin */
     x = Math.round(ox - w / 2 + (drago ? px : 0));
     y = Math.round(oy - h / 2 + (drago ? py : 0));
-    ctx.fillText(x + '×' + y, x0, y0 + 16);
+    ctx.fillText(x + '×' + -y, x0, y0 + 16);
     /* center */
     if (step === 12) {
       ctx.beginPath();
@@ -1532,39 +1552,44 @@
 </script>
 
 <body onload="init()">
-  <div id="header">
-    <img id="logo" />
-    <div id="title">
-      starfield<img id="cute_star" /><br>
-      <div id="subtitle">an interactive tutorial</div>
+  <div id="root">
+    <div id="header">
+      <img id="logo" />
+      <div id="title">
+        starfield<img id="cute_star" /><br>
+        <div id="subtitle">an interactive tutorial</div>
+      </div>
+      <div id="credits">
+        christophe resigne<br>
+        <a href="https://github.com/chiptune/starfield">github</a><br>
+        <div id="version"></div>
+      </div>
     </div>
-    <div id="credits">
-      christophe resigne<br>
-      <a href="https://github.com/chiptune/starfield">github</a><br>
-      <div id="version"></div>
+    <div id="content">
+      <div id="visual">
+        <canvas id="starfield"></canvas>
+        <div id="variables"></div>
+      </div>
+      <div id="menu">
+        <div id="steps"></div>
+        <div id="config">
+          <form>
+            <label for="motion">motion</label>
+            <input type="checkbox" id="motion" />
+          </form>
+          <form>
+            <label for="overlay">overlay</label>
+            <input type="checkbox" id="overlay" />
+          </form>
+          <form>
+            <label for="debug">debug</label>
+            <input type="checkbox" id="debug" />
+          </form>
+        </div>
+      </div>
+      <code><div></div></code>
     </div>
   </div>
-  <div id="content">
-    <canvas id="starfield"></canvas>
-  </div>
-  <div id="menu">
-    <div id="steps"></div>
-    <div id="config">
-      <form>
-        <label>motion</label>
-        <input type="checkbox" id="motion" />
-      </form>
-      <form>
-        <label>overlay</label>
-        <input type="checkbox" id="overlay" />
-      </form>
-      <form>
-        <label>debug</label>
-        <input type="checkbox" id="debug" />
-      </form>
-    </div>
-  </div>
-  <code id="code"></code>
 </body>
 
 </html>

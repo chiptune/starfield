@@ -1,24 +1,43 @@
-/* global variables */
 :root {
+  user-select: none;
+  color-scheme: only dark;
+  /* constants */
+  --var-count: 16;
+  /* global variables */
   --font-size: 14px;
   --margin: 4px;
   --padding: 8px;
   --border: 2px;
-  --border-color: #777;
   --radius: 6px;
   --scrollbar-size: 16px;
   --input-range-size: 14px;
-  --input-background: #bbb;
   --button-radius: 4px;
   --checkbox-size: 18px;
   --slider-height: 17px;
   --slider-margin: 1px;
-  --slider-label-width: 56px;
-  --slider-var-width: 48px;
+  --slider-label-width: 60px;
+  --slider-var-width: 44px;
+  --config-margin: 2px;
   --var-radius: 4px;
   --header-height: 42px;
   --code-width: 432px;
+  --code-line-height: 18px;
+  /* colors */
   --var-sat: 70%;
+  --color-background: #222;
+  --color-background-alt: #333;
+  --color-background-input: #777;
+  --color-border: #777;
+  --color-text: #fff;
+  --color-text-shadow: #000c;
+  --color-rainbow-1: hsl(135 90 50);
+  --color-rainbow-2: hsl(90 90 50);
+  --color-rainbow-3: hsl(45 90 50);
+  --color-rainbow-4: hsl(0 90 50);
+  --color-rainbow-5: hsl(-45 90 60);
+  --color-rainbow-6: hsl(-90 90 60);
+  --color-rainbow-7: hsl(-135 90 60);
+  --color-rainbow-8: hsl(-180 90 40);
 }
 
 @font-face {
@@ -26,6 +45,8 @@
   src: url("fonts/microgramma.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
+  font-synthesis: none;
 }
 
 @font-face {
@@ -33,6 +54,7 @@
   src: url("fonts/input_mono.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -40,36 +62,34 @@
   src: url("fonts/hud.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
+  font-synthesis: none;
 }
 
 ::-webkit-scrollbar {
   width: var(--scrollbar-size);
   height: var(--scrollbar-size);
+  cursor: pointer;
 }
 
 ::-webkit-scrollbar:vertical {
-  background-color: #333;
-  border-radius: calc(var(--scrollbar-size)/2);
+  background-color: var(--color-background-alt);
+  border-radius: calc(var(--scrollbar-size) / 2);
 }
 
 ::-webkit-scrollbar-thumb:vertical {
-  background-color: #777;
-  border: var(--margin) solid #333;
-  border-radius: calc(var(--scrollbar-size)/2);
-}
-
-html {
-  height: 100%;
-  user-select: none;
+  background-color: var(--color-background);
+  border: var(--margin) solid var(--color-background-alt);
+  border-radius: calc(var(--scrollbar-size) / 2);
 }
 
 body {
-  height: 100%;
-  overflow: hidden;
-  background-color: #222;
   margin: 0;
-  padding: var(--padding);
+  padding: 0;
   font-family: "input_mono";
+  text-rendering: optimizeLegibility;
+  background-color: var(--color-background);
+  overflow: hidden;
 }
 
 div {
@@ -78,19 +98,18 @@ div {
 }
 
 form {
-  display: inline-block;
-  padding: 0;
-  margin: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  column-gap: var(--margin);
 }
 
 select {
   appearance: none;
-  float: left;
   padding: 4px 6px 3px 6px;
-  background-color: var(--input-background);
+  background-color: var(--color-background-input);
   outline: none;
-  margin-bottom: var(--margin);
-  border-width: 0px;
+  border-width: 0;
   border-radius: var(--button-radius);
   font-size: var(--font-size);
   line-height: var(--font-size);
@@ -100,18 +119,14 @@ select {
 
 input {
   appearance: none;
-  display: inline-block;
-  margin: 0;
   background-color: #555;
   font: normal 12px/12px;
   outline: none;
 }
 
 input[type="range"] {
-  float: left;
   height: var(--input-range-size);
-  border-radius: calc(var(--input-range-size)/2);
-  margin-right: var(--margin);
+  border-radius: calc(var(--input-range-size) / 2);
   cursor: pointer;
 }
 
@@ -120,15 +135,23 @@ input[type="range"]::-webkit-slider-thumb {
   width: var(--input-range-size);
   height: var(--input-range-size);
   border-radius: 50%;
-  background-color: #fff;
+  background-color: var(--color-text);
+  box-shadow: 0 0 4px var(--color-text-shadow);
 }
 
-output,
 label {
-  float: left;
-  font: normal var(--font-size)/var(--font-size) "input_mono";
+  font: normal var(--font-size) / var(--font-size) "hud";
+  text-transform: uppercase;
+  letter-spacing: 0px;
+  color: var(--color-border);
+  text-shadow: 0 0 2px var(--color-text-shadow);
+}
+
+output {
+  font: normal var(--font-size) / var(--font-size) "input_mono";
   letter-spacing: -1px;
-  color: #fff;
+  color: var(--color-text);
+  text-shadow: 0 0 2px var(--color-text-shadow);
 }
 
 a {
@@ -145,16 +168,27 @@ a::before {
   content: "➜ ";
 }
 
+#root {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--padding);
+  background-color: var(--color-background);
+  padding: var(--padding);
+  overflow: hidden;
+  visibility: hidden;
+}
+
 #header {
-  float: left;
-  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-grow: 0;
   height: var(--header-height);
-  margin-bottom: var(--padding);
   font-family: "microgramma";
+  text-shadow: 0 0 2px var(--color-text-shadow);
 }
 
 #logo {
-  float: left;
+  flex-shrink: 0;
   width: var(--header-height);
   height: var(--header-height);
   margin-bottom: var(--padding);
@@ -162,21 +196,20 @@ a::before {
 }
 
 #title {
-  float: left;
+  flex-grow: 1;
   font-size: 32px;
   line-height: 28px;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--color-text);
 }
 
 #subtitle {
-  clear: both;
-  float: left;
+  width: fit-content;
   font-size: 16px;
   line-height: 16px;
   letter-spacing: -0.5px;
   text-transform: uppercase;
-  color: #777;
+  color: var(--color-border);
 }
 
 #cute_star {
@@ -186,120 +219,99 @@ a::before {
 }
 
 #credits {
-  float: right;
+  align-self: flex-end;
   font-size: var(--font-size);
   line-height: var(--font-size);
   text-transform: uppercase;
   text-align: right;
-  color: #999;
+  color: #579;
 }
 
 #version {
-  float: right;
-  font: var(--font-size)/var(--font-size) "hud";
+  align-self: flex-end;
+  font: var(--font-size) / var(--font-size) "hud";
   text-transform: uppercase;
-  text-align: right;
   color: #bbb;
 }
 
 #content {
-  clear: both;
-  float: left;
-  margin-right: var(--padding);
-  /*calc(var(--padding) + var(--border)*2);*/
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  column-gap: var(--padding);
+  height: calc(100vh - var(--header-height) - var(--padding) * 3);
+}
+
+#visual {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  row-gap: var(--padding);
 }
 
 #starfield {
-  /*border: var(--border) solid var(--border-color);*/
+  flex-grow: 1;
   border-radius: var(--radius);
-  margin-bottom: var(--margin);
   cursor: crosshair;
 }
 
+#variables {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  row-gap: var(--slider-margin);
+  height: calc(var(--slider-height) * var(--var-count) + var(--slider-margin) * (var(--var-count) - 1));
+}
+
 #menu {
-  float: left;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  row-gap: var(--padding);
 }
 
 #steps {
-  clear: both;
-  float: left;
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--margin);
 }
 
 #config {
-  clear: both;
-  float: left;
-  border: var(--border) solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--config-margin);
+  border: var(--border) solid var(--color-border);
   border-radius: calc(var(--button-radius) + var(--padding));
   padding: var(--padding);
-  margin-top: calc(var(--padding) - var(--margin));
-  padding-bottom: calc(var(--padding) - var(--margin));
-  width: calc(100% - var(--padding)*2 - var(--border)*2);
-}
-
-#config form {
-  clear: both;
-  float: left;
-  width: 100%;
-  margin-bottom: 2px;
 }
 
 #config label {
-  float: left;
-  height: var(--checkbox-size);
-  margin-top: 2px;
-  margin-right: var(--margin);
+  flex-grow: 1;
   font-size: var(--font-size);
-  line-height: var(--font-size);
   font-family: "microgramma";
   text-transform: uppercase;
   color: #bbb;
 }
 
 #config input {
-  float: right;
-}
-
-#code {
-  float: right;
-  width: var(--code-width);
-  height: calc(100vh - var(--header-height) - var(--padding)*3 - var(--border)*2);
-  margin-left: var(--padding);
-  border: var(--border) solid var(--border-color);
-  border-radius: var(--radius);
-  font: bold var(--font-size)/var(--font-size) "input_mono";
-  letter-spacing: -0.75px;
-  white-space: nowrap;
-  background-color: #333;
-  color: #bbb;
-  overflow-x: hidden;
-  overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .slider {
-  clear: both;
-  float: left;
-  width: 100%;
   height: var(--slider-height);
-  margin-bottom: var(--slider-margin);
 }
 
 .slider label {
   width: var(--slider-label-width);
-  margin-top: calc((var(--slider-height) - var(--input-range-size))/2);
 }
 
 .slider input {
   width: calc(100% - var(--slider-label-width) - var(--slider-var-width));
-  margin-top: calc((var(--slider-height) - var(--input-range-size))/2);
 }
 
 input[type="button"] {
-  clear: both;
-  float: left;
   appearance: none;
   outline: none;
-  width: 100%;
-  margin-bottom: var(--margin);
   padding: 5px 6px 4px 6px;
   background-color: #555;
   border-width: 0px;
@@ -309,12 +321,14 @@ input[type="button"] {
   font-family: "microgramma";
   text-transform: uppercase;
   text-align: left;
-  color: #fff;
+  color: var(--color-text);
+  text-shadow: 0 0 2px var(--color-text-shadow);
   cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 input[type="button"]:hover {
-  background-color: #777;
+  background-color: var(--color-border);
 }
 
 input[type="button"]:active {
@@ -324,13 +338,14 @@ input[type="button"]:active {
 input[type="button"]:disabled {
   background-color: #d93;
   color: #000;
+  text-shadow: none;
   cursor: default;
 }
 
 input[type="number"] {
   width: 34px;
-  background-color: var(--input-background);
-  color: #000;
+  background-color: var(--color-background-input);
+  color: var(--color-text);
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -342,13 +357,16 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="checkbox"] {
   width: var(--checkbox-size);
   height: var(--checkbox-size);
-  border-width: 0px;
+  margin: 0;
+  border-width: 0;
   border-radius: var(--button-radius);
-  background-color: #777;
+  background-color: var(--color-background-input);
   font: normal 26px/10px "hud";
   text-align: center;
-  color: #fff;
+  color: var(--color-text);
+  box-shadow: 0 0 2px var(--color-text-shadow);
   cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 input[type="checkbox"]:hover {
@@ -361,6 +379,7 @@ input[type="checkbox"]:active {
 
 input[type="checkbox"]:checked {
   background-color: #09b;
+  text-shadow: 0 1px 2px var(--color-text-shadow);
 }
 
 input[type="checkbox"]:checked:hover {
@@ -376,35 +395,78 @@ input[type="checkbox"]:checked::before {
   content: "x";
 }
 
-.code {
-  padding: 2px 4px 2px 4px;
-  overflow: hidden;
+code {
+  flex-shrink: 0;
+  width: var(--code-width);
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius);
+  font: bold var(--font-size)/var(--font-size) "input_mono";
+  letter-spacing: -0.75px;
+  white-space: pre;
+  background-color: var(--color-background-alt);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+code>div {
+  display: flex;
+  flex-direction: column;
 }
 
 .line {
-  display: inline-block;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  height: var(--code-line-height);
+  padding-left: var(--margin);
+  padding-right: var(--margin);
+  color: #bbb;
+  overflow: hidden;
+}
+
+.line:hover {
+  background-image: linear-gradient(90deg,
+      var(--color-rainbow-1),
+      var(--color-rainbow-2),
+      var(--color-rainbow-3),
+      var(--color-rainbow-4),
+      var(--color-rainbow-5),
+      var(--color-rainbow-6),
+      var(--color-rainbow-7),
+      var(--color-rainbow-8),
+      var(--color-rainbow-1));
+  background-size: 400% 100%;
+  animation: rainbow 20s linear infinite;
+  color: #000;
+}
+
+.nbr {
   color: #666;
   width: 15px;
   text-align: right;
   margin-right: var(--margin);
 }
 
+.line:hover .nbr {
+  color: #000;
+}
+
 .tab {
   color: #357;
 }
 
-.var {
-  border-radius: var(--var-radius);
-  padding: 0px 4px 0px 4px;
-  color: #fff;
+.line:hover .tab {
+  color: #0003;
 }
 
-.val {
+.var {
   border-radius: var(--var-radius);
   padding: 2px 3px 1px 3px;
   font-size: var(--font-size);
-  letter-spacing: -0.75px;
-  color: #fff;
+  line-height: var(--font-size);
+  text-shadow: 0 0 2px var(--color-text-shadow);
+  color: var(--color-text);
 }
 
 .var0 {
@@ -543,21 +605,6 @@ input[type="checkbox"]:checked::before {
   }
 }
 
-.code:hover {
-  background: linear-gradient(90deg, #e33, #e73, #ee3, #7e3, #3e3, #3e7, #3ee, #37e, #77e, #e3e, #e37, #e33);
-  background-size: 400% 100%;
-  animation: rainbow 20s linear infinite;
-  color: #000;
-
-  .line {
-    color: #fff;
-  }
-
-  .tab {
-    color: #fff3;
-  }
-}
-
 @keyframes rainbow {
   0% {
     background-position: 0% 0%;
@@ -566,4 +613,51 @@ input[type="checkbox"]:checked::before {
   100% {
     background-position: 400% 0%;
   }
+}
+
+.debug div,
+.debug canvas,
+.debug img,
+.debug form,
+.debug label,
+.debug input,
+.debug output,
+.debug code {
+  border-style: dashed !important;
+  border-width: 1px !important;
+  border-radius: 2px;
+  border-color: var(--color-rainbow-1);
+  padding: 0.2em;
+}
+
+.debug *>* {
+  border-color: var(--color-rainbow-2) !important;
+}
+
+.debug *>*>* {
+  border-color: var(--color-rainbow-3) !important;
+}
+
+.debug *>*>*>* {
+  border-color: var(--color-rainbow-4) !important;
+}
+
+.debug *>*>*>*>* {
+  border-color: var(--color-rainbow-5) !important;
+}
+
+.debug *>*>*>*>*>* {
+  border-color: var(--color-rainbow-6) !important;
+}
+
+.debug *>*>*>*>*>* {
+  border-color: var(--color-rainbow-7) !important;
+}
+
+.debug *>*>*>*>*>*>* {
+  border-color: var(--color-rainbow-8) !important;
+}
+
+.debug *>*>*>*>*>*>*>* {
+  border-color: var(--color-rainbow-1) !important;
 }
