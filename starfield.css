@@ -16,7 +16,7 @@
   --slider-height: 17px;
   --slider-margin: 1px;
   --slider-label-width: 60px;
-  --slider-var-width: 44px;
+  --slider-var-width: 48px;
   --config-margin: 2px;
   --var-radius: 4px;
   --header-height: 42px;
@@ -50,8 +50,8 @@
 }
 
 @font-face {
-  font-family: "input_mono";
-  src: url("fonts/input_mono.ttf") format("truetype");
+  font-family: "code";
+  src: url("fonts/chakra_petch.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -86,7 +86,7 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: "input_mono";
+  font-family: "code";
   text-rendering: optimizeLegibility;
   background-color: var(--color-background);
   overflow: hidden;
@@ -148,8 +148,8 @@ label {
 }
 
 output {
-  font: normal var(--font-size) / var(--font-size) "input_mono";
-  letter-spacing: -1px;
+  font: normal var(--font-size) / var(--font-size) "code";
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
   color: var(--color-text);
   text-shadow: 0 0 2px var(--color-text-shadow);
 }
@@ -260,7 +260,10 @@ a::before {
   flex-direction: column;
   flex-shrink: 0;
   row-gap: var(--slider-margin);
-  height: calc(var(--slider-height) * var(--var-count) + var(--slider-margin) * (var(--var-count) - 1));
+  height: calc(
+    var(--slider-height) * var(--var-count) + var(--slider-margin) *
+      (var(--var-count) - 1)
+  );
 }
 
 #menu {
@@ -361,12 +364,13 @@ input[type="checkbox"] {
   border-width: 0;
   border-radius: var(--button-radius);
   background-color: var(--color-background-input);
-  font: normal 26px/10px "hud";
+  font: normal 25px/10px "hud";
   text-align: center;
   color: var(--color-text);
   box-shadow: 0 0 2px var(--color-text-shadow);
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
+  overflow: hidden;
 }
 
 input[type="checkbox"]:hover {
@@ -400,15 +404,15 @@ code {
   width: var(--code-width);
   border: var(--border) solid var(--color-border);
   border-radius: var(--radius);
-  font: bold var(--font-size)/var(--font-size) "input_mono";
-  letter-spacing: -0.75px;
+  font: bold var(--font-size) / var(--font-size) "code";
+  font-variant-ligatures: none;
   white-space: pre;
   background-color: var(--color-background-alt);
   overflow-x: hidden;
   overflow-y: auto;
 }
 
-code>div {
+code > div {
   display: flex;
   flex-direction: column;
 }
@@ -426,16 +430,18 @@ code>div {
 }
 
 .line:hover {
-  background-image: linear-gradient(90deg,
-      var(--color-rainbow-1),
-      var(--color-rainbow-2),
-      var(--color-rainbow-3),
-      var(--color-rainbow-4),
-      var(--color-rainbow-5),
-      var(--color-rainbow-6),
-      var(--color-rainbow-7),
-      var(--color-rainbow-8),
-      var(--color-rainbow-1));
+  background-image: linear-gradient(
+    90deg,
+    var(--color-rainbow-1),
+    var(--color-rainbow-2),
+    var(--color-rainbow-3),
+    var(--color-rainbow-4),
+    var(--color-rainbow-5),
+    var(--color-rainbow-6),
+    var(--color-rainbow-7),
+    var(--color-rainbow-8),
+    var(--color-rainbow-1)
+  );
   background-size: 400% 100%;
   animation: rainbow 20s linear infinite;
   color: #000;
@@ -596,10 +602,8 @@ code>div {
 }
 
 .rem {
-  padding: 0px 4px 2px 4px;
   background-color: #557;
   color: #aac;
-
   .line {
     color: #778;
   }
@@ -615,49 +619,42 @@ code>div {
   }
 }
 
-.debug div,
-.debug canvas,
-.debug img,
-.debug form,
-.debug label,
-.debug input,
-.debug output,
-.debug code {
+.debug * {
   border-style: dashed !important;
   border-width: 1px !important;
   border-radius: 2px;
   border-color: var(--color-rainbow-1);
-  padding: 0.2em;
+  padding: 0.1em;
 }
 
-.debug *>* {
+.debug * > * {
   border-color: var(--color-rainbow-2) !important;
 }
 
-.debug *>*>* {
+.debug * > * > * {
   border-color: var(--color-rainbow-3) !important;
 }
 
-.debug *>*>*>* {
+.debug * > * > * > * {
   border-color: var(--color-rainbow-4) !important;
 }
 
-.debug *>*>*>*>* {
+.debug * > * > * > * > * {
   border-color: var(--color-rainbow-5) !important;
 }
 
-.debug *>*>*>*>*>* {
+.debug * > * > * > * > * > * {
   border-color: var(--color-rainbow-6) !important;
 }
 
-.debug *>*>*>*>*>* {
+.debug * > * > * > * > * > * {
   border-color: var(--color-rainbow-7) !important;
 }
 
-.debug *>*>*>*>*>*>* {
+.debug * > * > * > * > * > * > * {
   border-color: var(--color-rainbow-8) !important;
 }
 
-.debug *>*>*>*>*>*>*>* {
+.debug * > * > * > * > * > * > * > * {
   border-color: var(--color-rainbow-1) !important;
 }
