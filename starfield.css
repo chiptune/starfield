@@ -11,17 +11,19 @@
   --radius: 6px;
   --scrollbar-size: 16px;
   --input-range-size: 14px;
+  --button-padding: 5px 10px 4px 10px;
   --button-radius: 4px;
   --checkbox-size: 18px;
   --slider-height: 17px;
   --slider-margin: 1px;
   --slider-label-width: 60px;
-  --slider-var-width: 48px;
+  --slider-var-width: 54px;
   --config-margin: 2px;
   --var-radius: 4px;
-  --header-height: 42px;
   --code-width: 432px;
   --code-line-height: 18px;
+  --logo-size: 42px;
+  --delay: 0.5s;
   /* colors */
   --var-sat: 70%;
   --color-background: #222;
@@ -55,6 +57,7 @@
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+  font-synthesis: none;
 }
 
 @font-face {
@@ -84,9 +87,12 @@
 }
 
 body {
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
   font-family: "code";
+  font-size: var(--font-size);
   text-rendering: optimizeLegibility;
   background-color: var(--color-background);
   overflow: hidden;
@@ -147,13 +153,6 @@ label {
   text-shadow: 0 0 2px var(--color-text-shadow);
 }
 
-output {
-  font: normal var(--font-size) / var(--font-size) "code";
-  font-variant-numeric: tabular-nums lining-nums slashed-zero;
-  color: var(--color-text);
-  text-shadow: 0 0 2px var(--color-text-shadow);
-}
-
 a {
   color: #599;
   text-decoration: none;
@@ -169,38 +168,53 @@ a::before {
 }
 
 #root {
+  width: calc(100vw - var(--padding) * 2);
+  height: calc(100vh - var(--padding) * 2);
+  padding: var(--padding);
   display: flex;
   flex-direction: column;
   row-gap: var(--padding);
   background-color: var(--color-background);
-  padding: var(--padding);
-  overflow: hidden;
   visibility: hidden;
 }
 
 #header {
   display: flex;
   flex-direction: row;
+  flex-shrink: 1;
   flex-grow: 0;
-  height: var(--header-height);
   font-family: "microgramma";
   text-shadow: 0 0 2px var(--color-text-shadow);
 }
 
 #logo {
   flex-shrink: 0;
-  width: var(--header-height);
-  height: var(--header-height);
-  margin-bottom: var(--padding);
+  width: var(--logo-size);
+  height: var(--logo-size);
   margin-right: var(--padding);
 }
 
 #title {
   flex-grow: 1;
   font-size: 32px;
-  line-height: 28px;
+  line-height: 24px;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--color-text);
+  text-shadow: none;
+  background: linear-gradient(
+    #124,
+    #c48 20%,
+    #e80 25%,
+    #fc8 30%,
+    #fff 34%,
+    #324 35%,
+    #448 45%,
+    #48c 60%,
+    var(--color-border)
+  );
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 #subtitle {
@@ -210,6 +224,7 @@ a::before {
   letter-spacing: -0.5px;
   text-transform: uppercase;
   color: var(--color-border);
+  -webkit-text-fill-color: var(--color-border);
 }
 
 #cute_star {
@@ -219,9 +234,7 @@ a::before {
 }
 
 #credits {
-  align-self: flex-end;
-  font-size: var(--font-size);
-  line-height: var(--font-size);
+  white-space: nowrap;
   text-transform: uppercase;
   text-align: right;
   color: #579;
@@ -229,9 +242,11 @@ a::before {
 
 #version {
   align-self: flex-end;
-  font: var(--font-size) / var(--font-size) "hud";
+  font: var(--font-size) / var(--font-size) "code";
   text-transform: uppercase;
+  letter-spacing: 0.25px;
   color: #bbb;
+  text-shadow: 0 0 2px var(--color-text-shadow);
 }
 
 #content {
@@ -239,18 +254,21 @@ a::before {
   flex-direction: row;
   flex-grow: 1;
   column-gap: var(--padding);
-  height: calc(100vh - var(--header-height) - var(--padding) * 3);
 }
 
 #visual {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  min-width: 64px;
   row-gap: var(--padding);
 }
 
 #starfield {
+  display: flex;
+  flex-shrink: 1;
   flex-grow: 1;
+  flex-basis: content;
   border-radius: var(--radius);
   cursor: crosshair;
 }
@@ -258,12 +276,8 @@ a::before {
 #variables {
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
   row-gap: var(--slider-margin);
-  height: calc(
-    var(--slider-height) * var(--var-count) + var(--slider-margin) *
-      (var(--var-count) - 1)
-  );
+  height: calc(var(--slider-height) * var(--var-count) + var(--slider-margin) * (var(--var-count) - 1));
 }
 
 #menu {
@@ -286,6 +300,7 @@ a::before {
   border: var(--border) solid var(--color-border);
   border-radius: calc(var(--button-radius) + var(--padding));
   padding: var(--padding);
+  background-color: var(--color-background);
 }
 
 #config label {
@@ -315,7 +330,7 @@ a::before {
 input[type="button"] {
   appearance: none;
   outline: none;
-  padding: 5px 6px 4px 6px;
+  padding: var(--button-padding);
   background-color: #555;
   border-width: 0px;
   border-radius: var(--button-radius);
@@ -327,7 +342,7 @@ input[type="button"] {
   color: var(--color-text);
   text-shadow: 0 0 2px var(--color-text-shadow);
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color var(--delay), color var(--delay), text-shadow var(--delay);
 }
 
 input[type="button"]:hover {
@@ -364,12 +379,12 @@ input[type="checkbox"] {
   border-width: 0;
   border-radius: var(--button-radius);
   background-color: var(--color-background-input);
-  font: normal 25px/10px "hud";
+  font: normal 26px/10px "hud";
   text-align: center;
   color: var(--color-text);
   box-shadow: 0 0 2px var(--color-text-shadow);
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color var(--delay), color var(--delay), box-shadow var(--delay), text-shadow var(--delay);
   overflow: hidden;
 }
 
@@ -383,7 +398,7 @@ input[type="checkbox"]:active {
 
 input[type="checkbox"]:checked {
   background-color: #09b;
-  text-shadow: 0 1px 2px var(--color-text-shadow);
+  text-shadow: 0 0 2px var(--color-text-shadow);
 }
 
 input[type="checkbox"]:checked:hover {
@@ -402,10 +417,12 @@ input[type="checkbox"]:checked::before {
 code {
   flex-shrink: 0;
   width: var(--code-width);
+  height: calc(100vh - var(--logo-size) - var(--padding) * 3 - var(--border) * 2);
   border: var(--border) solid var(--color-border);
   border-radius: var(--radius);
   font: bold var(--font-size) / var(--font-size) "code";
   font-variant-ligatures: none;
+  letter-spacing: 0.25px;
   white-space: pre;
   background-color: var(--color-background-alt);
   overflow-x: hidden;
@@ -452,6 +469,7 @@ code > div {
   width: 15px;
   text-align: right;
   margin-right: var(--margin);
+  flex-shrink: 0;
 }
 
 .line:hover .nbr {
@@ -459,20 +477,31 @@ code > div {
 }
 
 .tab {
-  color: #357;
+  width: 4px;
+  height: var(--code-line-height);
+  margin-right: 8px;
+  border-right: 1px solid;
+  border-right-color: #357;
+  flex-shrink: 0;
 }
 
 .line:hover .tab {
-  color: #0003;
+  border-right-color: #0002;
 }
 
 .var {
   border-radius: var(--var-radius);
-  padding: 2px 3px 1px 3px;
-  font-size: var(--font-size);
-  line-height: var(--font-size);
+  padding: 1px 4px 2px 4px;
+  margin-right: 1.25px;
+  font: normal 15px/15px "hud";
+  letter-spacing: 0.25px;
   text-shadow: 0 0 2px var(--color-text-shadow);
   color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.line:hover .var {
+  background-color: transparent;
 }
 
 .var0 {
@@ -579,8 +608,16 @@ code > div {
   color: #d77;
 }
 
+.line:hover [class^="sy"] {
+  color: #0008;
+}
+
 .op {
   color: #b9d;
+}
+
+.line:hover .op {
+  color: #0008;
 }
 
 .hl1 {
@@ -623,8 +660,8 @@ code > div {
   border-style: dashed !important;
   border-width: 1px !important;
   border-radius: 2px;
-  border-color: var(--color-rainbow-1);
   padding: 0.1em;
+  border-color: var(--color-rainbow-1) !important;
 }
 
 .debug * > * {
@@ -655,6 +692,6 @@ code > div {
   border-color: var(--color-rainbow-8) !important;
 }
 
-.debug * > * > * > * > * > * > * > * {
+vdebug * > * > * > * > * > * > * > * {
   border-color: var(--color-rainbow-1) !important;
 }

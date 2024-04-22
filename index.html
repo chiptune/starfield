@@ -8,27 +8,9 @@
     <meta name="author" content="REZ ᕕ( ᐛ )ᕗ" />
     <meta name="description" content="interactive code tutorial" />
     <link rel="preload" href="starfield.css" as="style" type="text/css" />
-    <link
-      rel="preload"
-      href="fonts/microgramma.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin="anonymous"
-    />
-    <link
-      rel="preload"
-      href="fonts/chakra_petch.ttf"
-      as="font"
-      type="font/ttf"
-      crossorigin="anonymous"
-    />
-    <link
-      rel="preload"
-      href="fonts/hud.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin="anonymous"
-    />
+    <link rel="preload" href="fonts/microgramma.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+    <link rel="preload" href="fonts/chakra_petch.ttf" as="font" type="font/ttf" crossorigin="anonymous" />
+    <link rel="preload" href="fonts/hud.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <link rel="stylesheet" href="starfield.css" />
     <script type="application/javascript" src="starfield.js"></script>
   </head>
@@ -77,23 +59,23 @@
 
 <script type="application/javascript" id="step0">
   step0_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, dpr, ox, oy, px, py, w, h, _w, drago } = sfo; // REM
+    sfo.translate(); // REM
+    let x = ox + (drago ? px : 0); // REM
+    let y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = "#000";
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-    //ctx.textAlign = 'center'; // REM
-    //ctx.fillStyle = '#fff'; // REM
-    //ctx.font = 'normal 20px/100% sans-serif'; // REM
-    //ctx.fillText('ᕕ( ᐛ )ᕗ', 0, -16); // REM
     /* display a cute star here */
-    x = px + (drago ? -px : 0) - _w / 4; // REM
-    y = py + (drago ? -py : 0) - _w / 4; // REM
+    x = (drago ? 0 : px) - _w / 4; // REM
+    y = (drago ? 0 : py) - _w / 4; // REM
     ctx.drawImage(cute_star, 0, 0, 128 * dpr, 128 * dpr, x, y, _w / 2, _w / 2); // REM
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time; // REM
-    time = performance.now(); // REM
-    tick(step0_draw); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time; // REM
+    sfo.time = performance.now(); // REM
+    sfo.tick(step0_draw); // REM
   };
 
   // # README #
@@ -104,7 +86,7 @@
   // # SHORTCUTS #
   // r: reset all parameters
   // c: reset stars origin
-  // p/space: animation play/pause
+  // p/enter: animation play/pause
   // o: overlay on/off
   // d/esc: debug mode on/off
   // up/down: cycle through steps
@@ -115,6 +97,8 @@
 
 <script type="application/javascript" id="step1">
   step1_init = () => {
+    "use strict"; // REM
+    const { stars, vx, vy, _nb, _w } = sfo; // REM
     window.seed = (1 + Math.sqrt(5)) / 2; // REM
     for (let i = 0; i < _nb; i++) {
       stars[i] = new Float32Array(2);
@@ -124,25 +108,30 @@
   };
 
   step1_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, ox, oy, px, py, w, h, _nb, _s, drago } = sfo; // REM
+    let x, y; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = "#000";
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     ctx.fillStyle = "#fff";
     for (let i = 0; i < _nb; i++) {
       [x, y] = stars[i];
-      ctx.beginPath();
       x += drago ? -px : 0; // REM
       y += drago ? -py : 0; // REM
+      ctx.beginPath();
       ctx.arc(px + x, py + y, _s * 2, 0, CIRCLE); // REM
       //ctx.arc(x, y, _s * 2, 0, CIRCLE); // NREM
       ctx.fill();
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time; // REM
-    time = performance.now(); // REM
-    tick(step1_draw); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time; // REM
+    sfo.time = performance.now(); // REM
+    sfo.tick(step1_draw); // REM
   };
 
   CIRCLE = Math.PI * 2; // 360° in radians
@@ -150,8 +139,11 @@
 
 <script type="application/javascript" id="step2">
   step2_init = () => {
-    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    "use strict"; // REM
+    const { stars, vx, vy, _nb, _w, _fp, _np } = sfo; // REM
+    let { depth } = sfo; // REM
     depth = _fp - _np;
+    window.seed = (1 + Math.sqrt(5)) / 2; // REM
     for (let i = 0; i < _nb; i++) {
       stars[i] = new Float32Array(3);
       stars[i][0] = vx + (lcg() - 0.5) * _w;
@@ -161,58 +153,74 @@
   };
 
   step2_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, ox, oy, px, py, w, h, _nb, _s, drago } = sfo; // REM
+    let x, y, z; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = "#000";
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     ctx.fillStyle = "#fff";
     for (let i = 0; i < _nb; i++) {
       [x, y, z] = stars[i];
-      [x, y, z] = get_p(x, y, z); // REM
+      [x, y, z] = sfo.get_p(x, y, z); // REM
       ctx.beginPath();
       ctx.arc(x / z, y / z, _s * 2, 0, CIRCLE);
       ctx.fill();
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time; // REM
-    time = performance.now(); // REM
-    tick(step2_draw); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time; // REM
+    sfo.time = performance.now(); // REM
+    sfo.tick(step2_draw); // REM
   };
 </script>
 
 <script type="application/javascript" id="step3">
   step3_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, ox, oy, px, py, w, h, _nb, _s, _f, drago } = sfo; // REM
+    let x, y, z, r; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = "#000";
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     ctx.fillStyle = "#fff";
     for (let i = 0; i < _nb; i++) {
       [x, y, z] = stars[i];
-      [x, y, z] = get_p(x, y, z); // REM
+      [x, y, z] = sfo.get_p(x, y, z); // REM
       r = (1 / z) * _f;
       ctx.beginPath();
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time; // REM
-    time = performance.now(); // REM
-    tick(step3_draw); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time; // REM
+    sfo.time = performance.now(); // REM
+    sfo.tick(step3_draw); // REM
   };
 </script>
 
 <script type="application/javascript" id="step4">
   step4_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, depth, ox, oy, px, py, w, h, drago } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl } = sfo; // REM
+    let x, y, z, r, c; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = "#000";
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     for (let i = 0; i < _nb; i++) {
       [x, y, z] = stars[i];
-      [x, y, z] = get_p(x, y, z); // REM
+      [x, y, z] = sfo.get_p(x, y, z); // REM
       r = _f / z;
       z -= _np;
       c = (1 - Math.pow(z / depth, _cl)) * 255.999;
@@ -221,23 +229,29 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time; // REM
-    time = performance.now(); // REM
-    tick(step4_draw); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time; // REM
+    sfo.time = performance.now(); // REM
+    sfo.tick(step4_draw); // REM
   };
 </script>
 
 <script type="application/javascript" id="step5">
   step5_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, depth, ox, oy, px, py, w, h, drago } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl } = sfo; // REM
+    let x, y, z, r, c; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = "#000";
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     for (let i = 0; i < _nb; i++) {
       [x, y, z] = stars[get_index(i)];
-      [x, y, z] = get_p(x, y, z); // REM
+      [x, y, z] = sfo.get_p(x, y, z); // REM
       r = _f / z;
       z -= _np;
       c = (1 - Math.pow(z / depth, _cl)) * 255.999;
@@ -246,32 +260,34 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time; // REM
-    time = performance.now(); // REM
-    tick(step5_draw); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time; // REM
+    sfo.time = performance.now(); // REM
+    sfo.tick(step5_draw); // REM
   };
 
   get_index = (i) => {
+    "use strict"; // REM
+    const { distance, depth, _nb } = sfo;
     let d = distance % depth;
-    if (d < 0) {
-      d += depth;
-    }
+    if (d < 0) d += depth;
     let n = Math.floor((d / depth) * _nb) - i;
-    if (n < 0) {
-      n += _nb;
-    }
-    if (n > _nb - 1) {
-      n -= _nb;
-    }
+    if (n < 0) n += _nb;
+    if (n > _nb - 1) n -= _nb;
     return n;
   };
 </script>
 
 <script type="application/javascript" id="step6">
   step6_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, depth, ox, oy, px, py, w, h, drago } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl, _o } = sfo; // REM
+    let x, y, z, r, c; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = `rgba(0,0,0,${_o})`;
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
@@ -285,19 +301,21 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time;
-    time = performance.now();
-    update_distance(); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
     //distance += (time - delta) / 1000 * _m; // NREM
-    tick(step6_draw);
+    sfo.tick(step6_draw);
   };
 
   get_position = (star) => {
-    [x, y, z] = star;
-    if (drag) x += px; // REM
-    if (drag) y += py; // REM
+    "use strict"; // REM
+    const { distance, depth, _np, _fp } = sfo; // REM
+    let [x, y, z] = star;
+    if (sfo.drag) x += sfo.px; // REM
+    if (sfo.drag) y += sfo.py; // REM
     z -= distance % depth;
     if (z < _np) {
       z += depth;
@@ -310,11 +328,19 @@
 
 <script type="application/javascript" id="step7">
   step7_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, depth, ox, oy, px, py, w, h, drago } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl, _o, _g, _h } = sfo; // REM
+    let x, y, z, r, d, a, rad1, rad2, g; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = `rgba(0,0,0,${_o})`;
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-    for (let i = 0; i < _nb; i++) {
+    let i = _nb;
+    while (i) {
+      i--;
       [x, y, z] = get_position(stars[i]);
       r = _f / z;
       d = _g * r;
@@ -332,23 +358,31 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time;
-    time = performance.now();
-    update_distance(); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
     //distance += (time - delta) / 1000 * _m; // NREM
-    tick(step7_draw);
+    sfo.tick(step7_draw);
   };
 </script>
 
 <script type="application/javascript" id="step8">
   step8_draw = () => {
-    translate(); // REM
+    "use strict"; // REM
+    const { ctx, stars, depth, ox, oy, px, py, w, h, drago } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl, _o, _g, _h, _dof } = sfo; // REM
+    let x, y, z, r, d, dof, a, rad1, rad2, g; // REM
+    sfo.translate(); // REM
+    x = ox + (drago ? px : 0); // REM
+    y = oy + (drago ? py : 0); // REM
     ctx.fillStyle = `rgba(0,0,0,${_o})`;
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-    for (let i = 0; i < _nb; i++) {
+    let i = _nb;
+    while (i) {
+      i--;
       [x, y, z] = get_position(stars[i]);
       r = _f / z;
       d = _g * r;
@@ -367,20 +401,26 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time;
-    time = performance.now();
-    update_distance(); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
     //distance += (time - delta) / 1000 * _m; // NREM
-    tick(step8_draw);
+    sfo.tick(step8_draw);
   };
 </script>
 
 <script type="application/javascript" id="step9">
   step9_draw = () => {
+    "use strict"; // REM
+    const { ctx, stars, depth } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl, _o, _g, _h, _dof } = sfo; // REM
+    let x, y, z, r, d, dof, l, rad1, rad2, g; // REM
     step9_clear();
-    for (let i = 0; i < _nb; i++) {
+    let i = _nb;
+    while (i) {
+      i--;
       [x, y, z] = get_position(stars[i]);
       r = _f / z;
       d = _g * r;
@@ -399,33 +439,36 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time;
-    time = performance.now();
-    update_distance(); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
     //distance += (time - delta) / 1000 * _m; // NREM
-    tick(step9_draw);
+    sfo.tick(step9_draw);
   };
 
   step9_clear = () => {
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
-    ctx.scale(dpr, dpr); // REM
-    x = ox + (drago ? px : 0); // REM
-    y = oy + (drago ? py : 0); // REM
-    ctx.translate(x, y); // REM
-    ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = `rgba(0,0,0,${_o})`;
-    ctx.fillRect(-x, -y, w, h); // REM
+    "use strict"; // REM
+    sfo.ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
+    sfo.ctx.scale(sfo.dpr, sfo.dpr); // REM
+    const x = sfo.ox + (sfo.drago ? sfo.px : 0); // REM
+    const y = sfo.oy + (sfo.drago ? sfo.py : 0); // REM
+    sfo.ctx.translate(x, y); // REM
+    sfo.ctx.globalCompositeOperation = "source-over";
+    sfo.ctx.fillStyle = `rgba(0,0,0,${sfo._o})`;
+    sfo.ctx.fillRect(-x, -y, sfo.w, sfo.h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
-    ctx.globalCompositeOperation = "lighter";
+    sfo.ctx.globalCompositeOperation = "lighter";
   };
 </script>
 
 <script type="application/javascript" id="step10">
   step10_init = () => {
+    "use strict"; // REM
+    const { vx, vy, stars, depth, _w, _nb, _np } = sfo; // REM
+    let x, y, k, a, r; // REM
     window.seed = (1 + Math.sqrt(5)) / 2; // REM
-    depth = _fp - _np;
     for (let i = 0; i < _nb; i++) {
       x = lcg() - 0.5;
       y = lcg() - 0.5;
@@ -433,21 +476,27 @@
       stars[i][0] = vx + x * _w;
       stars[i][1] = vy + y * _w;
       stars[i][2] = _np + (depth / _nb) * i;
-      stars[i][3] = (lcg() * 3 - x - y) * 30;
+      stars[i][3] = 210 + (lcg() * 3 - x - y) * 30;
       stars[i][4] = lcg() * 200 - 50;
     }
   };
 
   step10_draw = () => {
+    "use strict"; // REM
+    const { ctx, stars, depth, distance } = sfo; // REM
+    const { _nb, _s, _f, _np, _cs, _cl, _cy, _o, _g, _h, _dof } = sfo; // REM
+    let x, y, z, r, d, u, s, dof, l, rad1, rad2, g; // REM
     clear();
-    for (let i = 0; i < _nb; i++) {
+    let i = _nb;
+    while (i) {
+      i--;
       [x, y, z] = get_position(stars[i]);
       r = _f / z;
       d = _g * r;
       x *= r;
       y *= r;
       z -= _np;
-      u = stars[i][3] + (180 / depth) * (z + distance);
+      u = stars[i][3] + (_cy / depth) * (z + distance);
       s = stars[i][4] * _cs;
       dof = Math.min(1, z / (depth * _dof));
       l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
@@ -461,25 +510,26 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time;
-    time = performance.now();
-    update_distance(); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
     //distance += (time - delta) / 1000 * _m; // NREM
-    tick(step10_draw);
+    sfo.tick(step10_draw);
   };
 
   clear = () => {
+    "use strict"; // REM
+    const { ctx, dpr, depth, distance, _cs, _cy, _o } = sfo; // REM
+    const { ox, oy, px, py, w, h, drago } = sfo; // REM
     ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
     ctx.scale(dpr, dpr); // REM
-    x = ox + (drago ? px : 0); // REM
-    y = oy + (drago ? py : 0); // REM
+    const x = ox + (drago ? px : 0); // REM
+    const y = oy + (drago ? py : 0); // REM
     ctx.translate(x, y); // REM
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = `hsl(${(360 / depth) * distance} ${
-      _cs * 100
-    }%  5% / ${_o})`;
+    ctx.fillStyle = `hsl(${(_cy / depth) * distance} ${_cs * 100}%  5% / ${_o})`;
     ctx.fillRect(-x, -y, w, h);
     ctx.globalCompositeOperation = "lighter";
   };
@@ -487,15 +537,21 @@
 
 <script type="application/javascript" id="step11">
   step11_draw = () => {
+    "use strict"; // REM
+    const { ctx, stars, depth, distance } = sfo; // REM
+    const { _nb, _s, _f, _np, _cs, _cy, _cl, _o, _g, _h, _dof, _k } = sfo; // REM
+    let x, y, z, r, d, u, s, dof, l, rad1, rad2, g, k, sw, st, sr; // REM
     clear();
-    for (let i = 0; i < _nb; i++) {
+    let i = _nb;
+    while (i) {
+      i--;
       [x, y, z] = get_position(stars[i]);
       r = _f / z;
       d = _g * r;
       x *= r;
       y *= r;
       z -= _np;
-      u = stars[i][3] + (180 / depth) * (z + distance);
+      u = stars[i][3] + (_cy / depth) * (z + distance);
       s = stars[i][4] * _cs;
       dof = Math.min(1, z / (depth * _dof));
       l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
@@ -508,8 +564,9 @@
       g.addColorStop(1, `hsl(${u} 0% 0%)`);
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
-      k = _k * r;
+      g = null; // REM
       if (s > 0) continue;
+      k = _k * r;
       rad1 = Math.max((_s / _k) * dof * 0.95, 0);
       rad2 = Math.min((_s / _k) * (2.05 - dof), 1);
       g = ctx.createRadialGradient(x, y, 0, x, y, k);
@@ -536,58 +593,35 @@
       ctx.lineTo(x - k, y + st);
       ctx.lineTo(x - k, y - st);
       ctx.fill();
+      g = null; // REM
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time;
-    time = performance.now();
-    update_distance(); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
     //distance += (time - delta) / 1000 * _m; // NREM
-    tick(step11_draw);
+    sfo.tick(step11_draw);
   };
 </script>
 
 <script type="application/javascript" id="step12">
-  step12_init = () => {
-    window.seed = (1 + Math.sqrt(5)) / 2; // REM
-    depth = _fp - _np;
-    for (let i = 0; i < _nb; i++) {
-      x = lcg() - 0.5;
-      y = lcg() - 0.5;
-      stars[i] = new Float32Array(5);
-      stars[i][0] = vx + x * _w;
-      stars[i][1] = vy + y * _w;
-      stars[i][2] = _np + (depth / _nb) * i;
-      stars[i][3] = (lcg() * 3 - x - y) * 30;
-      stars[i][4] = lcg() * 200 - 50;
-    }
-    let k = _nb;
-    for (let i = 0; i < _t1; i++) {
-      for (let j = 0; j < _t2; j++) {
-        a = (CIRCLE / _t2) * j;
-        a += (CIRCLE / _t1) * i;
-        r = _w / 8;
-        stars[k] = new Float32Array(5);
-        stars[k][0] = vx + r * Math.cos(a);
-        stars[k][1] = vy + r * Math.sin(a);
-        stars[k][2] = _np + (depth / _t1) * i;
-        stars[k][3] = (360 / _t2) * j;
-        stars[k][4] = 50;
-        k++;
-      }
-    }
-  };
-
   step12_draw = () => {
+    "use strict"; // REM
+    const { ctx, stars, depth, distance } = sfo; // REM
+    const { _nb, _s, _f, _np, _cs, _cy, _cl, _o, _g, _h, _dof, _t1, _t2 } = sfo; // REM
+    let x, y, z, r, d, u, s, dof, l, rad1, rad2, g, k, sw, st, sr; // REM
     clear();
-    for (let i = 0; i < _nb + _t1 * _t2; i++) {
+    let i = _nb;
+    while (i) {
+      i--;
       [x, y, z] = get_position(stars[i]);
       r = _f / z;
       d = _g * r;
       x *= r;
       y *= r;
       z -= _np;
-      u = stars[i][3] + (180 / depth) * (z + distance);
+      u = stars[i][3] + (_cy / depth) * (z + distance);
       s = stars[i][4] * _cs;
       dof = Math.min(1, z / (depth * _dof));
       l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
@@ -601,12 +635,12 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    overlay_draw(); // REM
-    debug_draw(); // REM
-    delta = time;
-    time = performance.now();
-    update_distance(); // REM
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
     //distance += (time - delta) / 1000 * _m; // NREM
-    tick(step12_draw);
+    sfo.tick(step12_draw);
   };
 </script>

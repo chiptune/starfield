@@ -1,4 +1,6 @@
-const VERSION = [0, 1, 1];
+"use strict";
+
+const VERSION = [0, 1, 2];
 
 /* DOM manipulation shortcuts */
 const _i = (id) => document.getElementById(String(id));
@@ -14,97 +16,883 @@ const clamp = (n, min, max) => Math.max(min, Math.min(n, max));
 const lerp = (n, min, max) => min + n * (max - min);
 const normalize = (n, min, max) => (n - min) / (max - min);
 const lcg = () => {
+  "use strict";
   const LCG_MUL = 8121; // multiplier
   const LCG_INC = 28411; // increment
   const LCG_MOD = 134456; // modulus (2 ** 3 * 7 ** 5)
-  seed = (LCG_MUL * seed + LCG_INC) % LCG_MOD;
-  return seed / LCG_MOD;
+  window.seed = (LCG_MUL * window.seed + LCG_INC) % LCG_MOD;
+  return window.seed / LCG_MOD;
 };
 
-path = "starfield";
-root = document.location.origin + "/" + path + "/";
-const url = new URL(document.location.href).searchParams;
-step = Number(url.get("step")) || 0;
-space = 256;
-distance = Number(url.get("distance")) || 232;
-depth = 0;
-stars = [];
-vars = [
-  ["_nb", "number", 0, 4096, 8, 1024],
-  ["_s", "size", 0.01, 1, 0.01, 0.5],
-  ["_w", "space", 8, space * 2, 1, space],
-  ["_fp", "far_p", 8, space * 2, 1, space],
-  ["_np", "near_p", 1, space * 2, 1, 8],
-  ["_f", "focale", 1, 1024, 1, space],
-  ["_cl", "color 1", 0.01, 6, 0.01, 3],
-  ["_m", "motion", -64, 64, 1, 8],
-  ["_o", "opacity", 0.01, 1, 0.01, 0.5],
-  ["_g", "gradient", 1, 16, 0.1, 12],
-  ["_h", "halo", 0.01, 0.5, 0.01, 0.1],
-  ["_dof", "dof", 0.01, 1, 0.01, 0.15],
-  ["_cs", "color 2", 0, 1, 0.01, 0.75],
-  ["_k", "spike", 2, 16, 0.1, 6],
-  ["_t1", "tunnel 1", 0, 128, 1, 36],
-  ["_t2", "tunnel 2", 0, 64, 1, 12],
-];
-steps = [
-  ["intro", null, [6, 11, 19], [3]],
-  ["points", [0, 1, 2], [3, 4, 15], [20]],
-  ["depth", [3, 4], [6, 17], [1]],
-  ["focale", [5], [5, 8]],
-  ["color #1", [6], [7, 8], [16]],
-  ["sorting", null, [4, 15, 16, 17, 18, 19, 20, 21, 22]],
-  [
-    "motion",
-    [7, 8],
-    [4, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28],
-  ],
-  ["gradient", [9, 10], [11, 12, 13, 14, 15, 16, 17, 18, 19]],
-  ["dof", [11], [10, 11, 12, 13]],
-  ["blending", null, [1, 27, 28, 29, 30, 31, 32]],
-  ["color #2", [12], [9, 10, 23, 24, 30, 31, 32, 33, 45]],
-  [
-    "spikes",
-    [13],
-    [
-      23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-      41, 42, 43, 44, 45, 46, 47, 48, 49,
-    ],
-  ],
-  [
-    "tunnel",
-    [14, 15],
-    [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
-  ],
-];
-ox = 0;
-oy = 0;
-oz = 1e12;
-vx = Number(url.get("x"));
-vy = Number(url.get("y"));
-px = 0;
-py = 0;
-mx = 0;
-my = 0;
-pause = Boolean(url.get("pause"));
-overlay = Boolean(url.get("overlay"));
-debug = Boolean(url.get("debug"));
-drag = false;
-drago = false;
-wheel = false;
-star_n = 0;
-time = performance.now();
-delta = performance.now();
-rti = 0;
-rtc = 128;
-rth = 56;
-rtmax = 120;
-rt = new Float32Array(rtc);
+class Starfield {
+  SPACE = 256;
+  DISTANCE = 444;
+  path = "starfield";
+  stars = [];
+  vars = [
+    ["_nb", "number", 0, 4096, 8, 1024],
+    ["_s", "size", 0.01, 1, 0.01, 0.5],
+    ["_w", "space", 8, this.SPACE * 2, 1, this.SPACE],
+    ["_fp", "far_p", 8, this.SPACE * 2, 1, this.SPACE],
+    ["_np", "near_p", 1, this.SPACE * 2, 1, 8],
+    ["_f", "focale", 1, 1024, 1, 256],
+    ["_cl", "light", 0.01, 6, 0.01, 3],
+    ["_m", "motion", -64, 64, 1, 8],
+    ["_o", "opacity", 0.01, 1, 0.01, 0.5],
+    ["_g", "gradient", 1, 24, 0.1, 12],
+    ["_h", "halo", 0.01, 0.5, 0.01, 0.1],
+    ["_dof", "dof", 0.01, 1, 0.01, 0.15],
+    ["_cs", "color", 0, 1, 0.01, 0.6],
+    ["_cy", "cycle", 0, 360, 1, 120],
+    ["_k", "spike", 2, 16, 0.1, 6],
+  ];
+  steps = [
+    ["intro", null, [6, 11, 19], [3]],
+    ["points", [0, 1, 2], [3, 4, 15], [20]],
+    ["depth", [3, 4], [6, 17], [1]],
+    ["focale", [5], [6, 8]],
+    ["light", [6], [7, 8], [16]],
+    ["sorting", null, [4, [15, 23]]],
+    ["motion", [7, 8], [4, [13, 16], [19, 28]], [1]],
+    ["gradient", [9, 10], [[12, 20]]],
+    ["dof", [11], [[12, 15]]],
+    ["blending", null, [1, [29, 34]]],
+    ["color", [12, 13], [8, 9, 24, 25, [31, 34], 46]],
+    ["spikes", [14], [[24, 51]]],
+    ["mirror", [], []],
+  ];
+  px = 0;
+  py = 0;
+  mx = 0;
+  my = 0;
+  drag = false;
+  drago = false;
+  wheel = false;
+  key = null;
+  shift = false;
+  star_n = 0;
+  time = performance.now();
+  delta = performance.now();
+  rti = 0;
+  rtc = 128;
+  rth = 56;
+  rtmax = 120;
+  rt = new Float32Array(128);
 
-const font = new FontFace("hud", "url(fonts/hud.woff2)");
-font.load().then(function (font) {
-  document.fonts.add(font);
-});
+  constructor() {
+    /* url params */
+    this.root = document.location.origin + "/" + this.path + "/";
+    this.url = new URL(document.location.href).searchParams;
+    this.step = Number(this.url.get("step")) || 0;
+    this.space = Number(this.url.get("space")) || this.SPACE;
+    this.distance = Number(this.url.get("distance")) || this.DISTANCE;
+    this.vx = Number(this.url.get("x")) || 0;
+    this.vy = Number(this.url.get("y")) || 0;
+    this.pause = Boolean(this.url.get("pause"));
+    this.overlay = Boolean(this.url.get("overlay"));
+    this.debug = Boolean(this.url.get("debug"));
+    /* variables */
+    this.vars.forEach((v) => {
+      this[v[0]] = Number(this.url.get(v[0].slice(1)) || v[5]);
+    });
+    this.depth = this._fp - this._np;
+    /* steps */
+    this.steps.forEach((v, i) => {
+      const btn = _c("input");
+      btn.type = "button";
+      btn.id = `step${i}_btn`;
+      btn.className = "step";
+      btn.value = v[0];
+      _a(_i("steps"), btn);
+      btn.addEventListener("click", () => {
+        this.run(i);
+      });
+    });
+    /* init canvas */
+    this.cvs = _i("starfield");
+    this.ctx = this.cvs.getContext("2d", { alpha: false });
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = "high";
+    this.ctx.lineCap = "round";
+    /* events */
+    _i("motion").addEventListener("change", () => {
+      this.set_pause(!this.pause);
+    });
+    _i("overlay").addEventListener("change", () => {
+      this.set_overlay(!this.overlay);
+    });
+    _i("debug").addEventListener("change", () => {
+      this.set_debug(!this.debug);
+    });
+    addEventListener("resize", this.resize.bind(this));
+    addEventListener("keydown", this.keydown.bind(this));
+    addEventListener("keyup", this.keyup.bind(this));
+    addEventListener("drop", () => false);
+    addEventListener("mousemove", this.mousemove.bind(this));
+    this.cvs.addEventListener("mousedown", this.mousedown.bind(this));
+    addEventListener("mouseup", this.mouseup.bind(this));
+    this.cvs.addEventListener("mousewheel", this.mousewheel.bind(this));
+  }
+
+  resize = () => {
+    this.w = this.cvs.offsetWidth;
+    this.h = this.cvs.offsetHeight;
+    this.ox = this.w / 2 + Number(this.url.get("ox") || 0);
+    this.oy = this.h / 2 - Number(this.url.get("oy") || 0);
+    this.oz = 1e12;
+    this.dpr = window.devicePixelRatio;
+    this.cvs.width = this.w * this.dpr;
+    this.cvs.height = this.h * this.dpr;
+    this.cvs.style.width = this.w + "px";
+    this.cvs.style.height = this.h + "px";
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(this.dpr, this.dpr);
+    this.ctx.translate(this.ox, this.oy);
+    this.generate_overlay();
+    this.single_frame();
+  };
+
+  init = () => {
+    step10_init();
+    this.resize();
+    this.set_pause(this.pause);
+    this.set_overlay(this.overlay);
+    this.set_debug(this.debug);
+    this.run(this.step);
+  };
+
+  mousedown(e) {
+    this.mx = e.pageX - this.cvs.offsetLeft - this.cvs.width / 2;
+    this.my = e.pageY - this.cvs.offsetTop - this.cvs.height / 2;
+    if (!this.shift) {
+      this.drag = true;
+    } else {
+      this.drago = true;
+    }
+    this.cvs.style.cursor = "grab";
+    this.start();
+  }
+
+  mouseup() {
+    this.mx = 0;
+    this.my = 0;
+    if (this.drag) {
+      for (let i = 0; i < this.stars.length; i++) {
+        this.stars[i][0] += this.px;
+        this.stars[i][1] += this.py;
+      }
+      this.vx += this.px;
+      this.vy += this.py;
+      this.drag = false;
+    } else if (this.drago) {
+      this.ox += this.px;
+      this.oy += this.py;
+      this.drago = false;
+    }
+    this.px = 0;
+    this.py = 0;
+    this.cvs.style.cursor = "crosshair";
+    this.set_url();
+    for (let i = 0; i < 4; i++) {
+      this.start();
+    }
+  }
+
+  mousemove(e) {
+    const x = e.pageX - this.mx - this.cvs.offsetLeft - this.cvs.width / 2;
+    const y = e.pageY - this.my - this.cvs.offsetTop - this.cvs.height / 2;
+    if (this.drag || this.drago) {
+      this.px = x;
+      this.py = y;
+    }
+  }
+
+  mousewheel(e) {
+    e.preventDefault();
+    clearTimeout(this.timeout);
+    if (!this.wheel) {
+      this.wheel = true;
+      this.start();
+    }
+    this.distance -= (e.deltaY / 2 ** 12) * this._f;
+    this.timeout = setTimeout(() => {
+      this.wheel = false;
+      this.set_url();
+    }, 250);
+  }
+  set_pause = (state) => {
+    this.pause = state;
+    _i("motion").checked = !this.pause;
+    this.set_url();
+    if (this.pause) {
+      this.single_frame();
+    } else {
+      this.start();
+    }
+  };
+
+  keyup = (e) => {
+    this.shift = e.shiftKey;
+    this.key = e.key;
+  };
+
+  keydown = (e) => {
+    this.shift = e.shiftKey;
+    this.key = e.key;
+    switch (e.key) {
+      case "Escape":
+      case "d":
+        if (this.shift) {
+          document.body.className = document.body.className === "" ? "debug" : "";
+        } else {
+          this.set_debug(!this.debug);
+        }
+        break;
+      case "o":
+        this.set_overlay(!this.overlay);
+        break;
+      case "Enter":
+      case "p":
+        this.set_pause(!this.pause);
+        break;
+      case "ArrowUp":
+        if (this.shift) {
+          this.oy = Math.round(this.oy - 1);
+          this.start();
+        } else {
+          this.run((this.step + this.steps.length - 1) % this.steps.length);
+        }
+        break;
+      case "ArrowDown":
+        if (this.shift) {
+          this.oy = Math.round(this.oy + 1);
+          this.start();
+        } else {
+          this.run((this.step + 1) % this.steps.length);
+        }
+        break;
+      case "ArrowLeft":
+        if (this.shift) {
+          this.ox = Math.round(this.ox - 1);
+          this.start();
+        } else {
+          this.star_n = (this.star_n + this._nb - 1) % this._nb;
+          this.single_frame();
+        }
+        break;
+      case "ArrowRight":
+        if (this.shift) {
+          this.ox = Math.round(this.ox + 1);
+          this.start();
+        } else {
+          this.star_n = (this.star_n + 1) % this._nb;
+          this.single_frame();
+        }
+        break;
+      case "PageUp":
+        this.distance = Math.round(this.distance + 1);
+        this.start();
+        break;
+      case "PageDown":
+        this.distance = Math.round(this.distance - 1);
+        this.start();
+        break;
+      case "c":
+        this.ox = this.w / 2;
+        this.oy = this.h / 2;
+        this.vx = 0;
+        this.vy = 0;
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.scale(this.dpr, this.dpr);
+        this.ctx.translate(this.ox, this.oy);
+        this.set_url();
+        step10_init();
+        this.single_frame();
+        break;
+      case "r":
+        this.reset();
+        this.set_url();
+        this.code2text();
+        step10_init();
+        this.single_frame();
+        break;
+    }
+  };
+
+  set_overlay = (state) => {
+    this.overlay = state;
+    _i("overlay").checked = this.overlay;
+    this.set_url();
+    this.single_frame();
+  };
+
+  set_debug = (state) => {
+    this.debug = state;
+    _i("debug").checked = this.debug;
+    this.set_url();
+    this.single_frame();
+  };
+
+  set_url = (e) => {
+    const title = "starfield" + (this.step > 0 ? ` > step${this.step}: ${this.steps[this.step][0]}` : "");
+    document.title = title;
+    let params = [
+      this.step > 0 ? "step=" + this.step : null,
+      this._nb !== this.vars[0][5] ? "nb=" + this._nb : null,
+      this.vx !== 0 ? "x=" + this.vx : null,
+      this.vy !== 0 ? "y=" + this.vy : null,
+      this.ox !== this.w / 2 ? "ox=" + (this.ox - this.w / 2) : null,
+      this.oy !== this.h / 2 ? "oy=" + -(this.oy - this.h / 2) : null, // Y up!
+      Math.round(this.distance) !== this.DISTANCE ? "distance=" + Math.round(this.distance) : null,
+      this.pause ? "pause=true" : null,
+      this.overlay ? "overlay=true" : null,
+      this.debug ? "debug=true" : null,
+    ];
+    params = params.filter((p) => p !== null);
+    history.replaceState({ data: "" }, title, this.root + (params.length > 0 ? "?" : "") + params.join("&"));
+  };
+
+  generate_overlay = () => {
+    this.ocvs = _c("canvas");
+    this.ocvs.width = this.w * this.dpr;
+    this.ocvs.height = this.h * this.dpr;
+    this.octx = this.ocvs.getContext("2d", { alpha: false });
+    this.octx.imageSmoothingEnabled = true;
+    this.octx.imageSmoothingQuality = "high";
+    this.octx.lineCap = "round";
+    this.octx.setTransform(1, 0, 0, 1, 0, 0);
+    this.octx.scale(this.dpr, this.dpr);
+    /* background */
+    this.octx.fillStyle = `rgb(0,0,0)`;
+    this.octx.fillRect(0, 0, this.w, this.h);
+    /* scanline */
+    const dot = 1;
+    this.octx.setLineDash([0, dot * 3]);
+    //this.octx.lineWidth = dot * 1.2;
+    //this.overlay_rgb(dot, 64, 0.4);
+    this.octx.lineWidth = dot;
+    this.overlay_rgb(dot, 96, 1);
+  };
+
+  overlay_rgb = (dot, c, alpha) => {
+    /* R */
+    this.octx.strokeStyle = `rgba(255.999,${c},${c},${alpha})`;
+    let y = dot / 2;
+    for (let i = 0; i < this.h; i++) {
+      this.octx.beginPath();
+      this.octx.moveTo(0, y);
+      this.octx.lineTo(this.w, y);
+      this.octx.lineDashOffset = i % 2 === 0 ? 0 : dot * 1.5;
+      this.octx.stroke();
+      y += dot;
+    }
+    /* G */
+    this.octx.strokeStyle = `rgba(${c},255.999,${c},${alpha})`;
+    y = dot / 2;
+    for (let i = 0; i < this.h; i++) {
+      this.octx.beginPath();
+      this.octx.moveTo(0, y);
+      this.octx.lineTo(this.w, y);
+      this.octx.lineDashOffset = dot + (i % 2 === 0 ? 0 : dot * 1.5);
+      this.octx.stroke();
+      y += dot;
+    }
+    /* B */
+    this.octx.strokeStyle = `rgba(${c},${c},255.999,${alpha})`;
+    y = dot / 2;
+    for (let i = 0; i < this.h; i++) {
+      this.octx.beginPath();
+      this.octx.moveTo(0, y);
+      this.octx.lineTo(this.w, y);
+      this.octx.lineDashOffset = dot * 2 + (i % 2 === 0 ? 0 : dot * 1.5);
+      this.octx.stroke();
+      y += dot;
+    }
+  };
+
+  single_frame = () => {
+    const opacity = this._o;
+    this._o = 1;
+    window[`step${this.step}_draw`]();
+    this._o = opacity;
+  };
+
+  start = () => {
+    this.time = performance.now();
+    cancelAnimationFrame(this.rid);
+    this.rid = requestAnimationFrame(window[`step${this.step}_draw`].bind(this));
+  };
+
+  stop = () => {
+    cancelAnimationFrame(this.rid);
+    this.rid = undefined;
+  };
+
+  tick = (fn) => {
+    this.rt[this.rti] = Math.min(1000 / (this.time - this.delta), this.rtmax);
+    this.rti = (this.rti + 1) % this.rtc;
+    cancelAnimationFrame(this.rid);
+    if (this.drag || this.drago || this.wheel || (this.step > 5 && !this.pause)) {
+      this.rid = requestAnimationFrame(fn);
+    }
+  };
+
+  get_p = (x, y, z) => {
+    if (this.drag) {
+      x += this.px;
+      y += this.py;
+    }
+    z -= this.distance % this.depth;
+    if (z < this._np) {
+      z += this.depth;
+    } else if (z > this._fp) {
+      z -= this.depth;
+    }
+    return [x, y, z];
+  };
+
+  translate = () => {
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(this.dpr, this.dpr);
+    this.ctx.translate(this.ox + (this.drago ? this.px : 0), this.oy + (this.drago ? this.py : 0));
+  };
+
+  update_distance = () => {
+    if (this.pause) return;
+    this.distance += ((this.time - this.delta) / 1000) * this._m;
+  };
+
+  overlay_draw = () => {
+    if (!this.overlay) return;
+    const x = -this.ox - (this.drago ? this.px : 0);
+    const y = -this.oy - (this.drago ? this.py : 0);
+    this.ctx.globalCompositeOperation = "overlay";
+    this.ctx.globalAlpha = this._o;
+    this.ctx.drawImage(
+      this.ocvs,
+      0,
+      0,
+      this.w * this.dpr,
+      this.h * this.dpr,
+      x,
+      y,
+      this.w * this.dpr,
+      this.h * this.dpr,
+    );
+    this.ctx.globalAlpha = 1;
+    this.ctx.globalCompositeOperation = "source-over";
+  };
+
+  debug_draw = () => {
+    if (!this.debug) return;
+    const { ctx, w, h, vx, vy, px, py, ox, oy, oz } = this;
+    const { step, stars, star_n, distance, depth, drag, drago } = this;
+    const { _nb, _s, _w, _f, _np, _fp, _g, _dof } = this;
+    const { rt, rti, rtc, rth, rtmax } = this;
+    const m = 4;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.lineWidth = 2;
+    ctx.textAlign = "center";
+    ctx.font = "16px/16px hud";
+    let x0, y0, r0;
+    let x1, y1, r1, s1;
+    let x2, y2, r2, s2;
+    let x = drag ? px : 0;
+    let y = drag ? py : 0;
+    if (step === 1) {
+      x0 = drago ? px : vx;
+      y0 = drago ? py : vy;
+      x0 = vx + x;
+      y0 = vy + y;
+      x1 = vx + x - _w / 2 - m;
+      y1 = vy + y - _w / 2 - m;
+      s1 = _w + m * 2;
+    } else if (step === 2) {
+      x0 = (vx + x) / oz;
+      y0 = (vy + y) / oz;
+      x1 = (vx + x - _w / 2) / _fp - m;
+      y1 = (vy + y - _w / 2) / _fp - m;
+      s1 = _w / _fp + m * 2;
+      x2 = (vx + x - _w / 2) / _np - m;
+      y2 = (vy + y - _w / 2) / _np - m;
+      s2 = _w / _np + m * 2;
+    } else {
+      r0 = _f / oz;
+      x0 = (vx + x) * r0;
+      y0 = (vy + y) * r0;
+      r1 = _f / _fp;
+      x1 = (vx + x - _w / 2) * r1 - m;
+      y1 = (vy + y - _w / 2) * r1 - m;
+      s1 = _w * r1 + m * 2;
+      r2 = _f / _np;
+      x2 = (vx + x - _w / 2) * r2 - m;
+      y2 = (vy + y - _w / 2) * r2 - m;
+      s2 = _w * r2 + m * 2;
+    }
+    ctx.strokeStyle = "#c50";
+    x = (drago ? -px : 0) - ox;
+    y = (drago ? -py : 0) - oy;
+    squircle(ctx, x + 1, y + 1, w - 2, h - 2, 6);
+    ctx.stroke();
+    ctx.setLineDash([2, 4]);
+    ctx.moveTo(x + w / 2, y + 2);
+    ctx.lineTo(x + w / 2, y + h - 4);
+    ctx.moveTo(x + 2, y + h / 2);
+    ctx.lineTo(x + w - 4, y + h / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "#5c0";
+    ctx.fillStyle = "#5c0";
+    if (step === 0) {
+      //ctx.fillText('HEY!', 48, -40);
+    } else if (step === 1) {
+      ctx.strokeRect(x1, y1, s1, s1);
+      ctx.fillText(_w + "×" + _w, x1 + s1 / 2, y1 - 5);
+    } else {
+      ctx.beginPath();
+      ctx.rect(x1, y1, s1, s1);
+      ctx.rect(x2, y2, s2, s2);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.moveTo(x1 + s1, y1);
+      ctx.lineTo(x2 + s2, y2);
+      ctx.moveTo(x1 + s1, y1 + s1);
+      ctx.lineTo(x2 + s2, y2 + s2);
+      ctx.moveTo(x1, y1 + s1);
+      ctx.lineTo(x2, y2 + s2);
+      ctx.stroke();
+      ctx.fillText(_w + "×" + _w + "×" + (_fp - _np), x1 + s1 / 2, y1 - 4);
+    }
+    if (step > 1) {
+      ctx.beginPath();
+      ctx.moveTo(x0 - m, y0);
+      ctx.lineTo(x0 + m, y0);
+      ctx.moveTo(x0, y0 - m);
+      ctx.lineTo(x0, y0 + m);
+      ctx.stroke();
+      ctx.lineDashOffset = 2;
+      ctx.setLineDash([2, 8]);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1 + s1 / 2, y1 + s1 / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, (_w / 128) * r1, 0, CIRCLE);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, (_w / 128) * r2, 0, CIRCLE);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, 2, 0, CIRCLE);
+      ctx.stroke();
+      ctx.lineDashOffset = 8;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(x1 + s1 / 2, y1 + s1 / 2);
+      ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    /* origin */
+    x = Math.round(ox - w / 2 + (drago ? px : 0));
+    y = Math.round(oy - h / 2 + (drago ? py : 0));
+    ctx.fillText(x + "×" + -y, x0, y0 + 16);
+    /* center */
+    if (step === 12) {
+      ctx.beginPath();
+      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, (_w / 8) * r1, 0, CIRCLE);
+      ctx.setLineDash([s1 / 64, s1 / 64]);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, (_w / 8) * r2, 0, CIRCLE);
+      ctx.setLineDash([s2 / 64, s2 / 64]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    /* depth */
+    if (step > 7) {
+      x = drag ? px : 0;
+      y = drag ? py : 0;
+      r1 = _f / (_np + _dof * depth);
+      x1 = (vx + x - _w / 2) * r1;
+      y1 = (vy + y - _w / 2) * r1;
+      s1 = _w * r1;
+      ctx.beginPath();
+      ctx.rect(x1 - 2, y1 - 2, s1 + 4, s1 + 4);
+      if (step === 12) {
+        ctx.moveTo(x1 + s1 / 2 + s1 / 8, y1 + s1 / 2);
+        ctx.arc(x1 + s1 / 2, y1 + s1 / 2, s1 / 8, 0, CIRCLE);
+      }
+      ctx.setLineDash([s1 / 64, s1 / 64]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    /* star position */
+    const n = star_n % _nb;
+    if (stars[n]) {
+      ctx.strokeStyle = "#e50";
+      ctx.fillStyle = "#e50";
+      ctx.textAlign = "center";
+      let p = Math.round(stars[n][0] - vx);
+      p += "×" + Math.round(stars[n][1] - vy);
+      let [x, y, z] = get_position(stars[n]);
+      p += "×" + Math.round(z);
+      z = step > 1 ? z : _fp;
+      const r = step !== 2 ? _f / z : 1 / z;
+      x *= r;
+      y *= r;
+      s1 = _s * r * 2 + m * 2;
+      s2 = _g * r + m * 2;
+      if (step > 0) {
+        ctx.strokeRect(x - s1 / 2, y - s1 / 2, s1, s1);
+        if (step < 7) {
+          ctx.fillText(p, x, y - s1 / 2 - 4);
+        }
+      }
+      if (step > 6) {
+        ctx.strokeRect(x - s2 / 2, y - s2 / 2, s2, s2);
+        ctx.fillText(p, x, y - s2 / 2 - 4);
+      }
+    }
+    /* rendertime */
+    x = (drago ? -px : 0) - ox + w - 8;
+    y = (drago ? -py : 0) - oy + 8;
+    ctx.strokeStyle = "#d90";
+    ctx.fillStyle = "#d90";
+    squircle(ctx, x - rtc, y, rtc, rth, 3);
+    ctx.stroke();
+    ctx.save();
+    ctx.clip();
+    ctx.beginPath();
+    let rtm = 0;
+    for (let i = 0; i < rtc; i++) {
+      let k = rti + i;
+      if (k > rtc - 1) {
+        k -= rtc;
+      }
+      const v = (rth / rtmax) * rt[k];
+      ctx.rect(x - rtc - 1 + i, y + rth - v - 1, 2, 2);
+      if (i > rtc - 33) {
+        rtm += rt[k];
+      }
+    }
+    ctx.fill();
+    ctx.restore();
+    ctx.textAlign = "right";
+    ctx.fillText(Math.floor(rtm / 32), x - m, y + m + 12);
+    /* distance */
+    ctx.fillText(`${Math.round(distance)} LY`, x, y + h - 16);
+  };
+
+  run = (id) => {
+    stop();
+    for (let i = 0; i <= this.vars.length; i++) {
+      _r(_i(`slider${i}`));
+      _r(_i(`list${i}`));
+    }
+    let btn = _i(`step${this.step}_btn`);
+    if (btn) {
+      btn.disabled = false;
+    }
+    this.step = parseInt(id || 0);
+    btn = _i(`step${this.step}_btn`);
+    if (!btn) {
+      return;
+    }
+    btn.disabled = true;
+    const variables = _i("variables");
+    let n = 0;
+    for (let i = 0; i <= this.step; i++) {
+      const v = this.steps[i][1];
+      if (!v) continue;
+      for (let j = 0; j < v.length; j++) {
+        const [name, text, min, max, step] = this.vars[v[j]];
+        const slider = _c("form");
+        slider.id = `slider${n}`;
+        slider.className = "slider";
+        _a(variables, slider);
+        const label = _c("label");
+        label.id = `label${n}`;
+        label.setAttribute("for", `range${n}`);
+        label.textContent = text;
+        label.style.float = "left";
+        _a(slider, label);
+        const range = _c("input");
+        range.type = "range";
+        range.id = `range${n}`;
+        range.n = n;
+        range.variable = name;
+        range.min = min;
+        range.max = max;
+        range.step = step;
+        range.addEventListener("input", this.update);
+        _a(slider, range);
+        range.value = this[range.variable];
+        this.range_color(range);
+        const value = _c("div");
+        value.id = `value${n}`;
+        value.textContent = range.value;
+        value.className = `var var${n}`;
+        _a(slider, value);
+        n++;
+      }
+    }
+    this.ctx.globalCompositeOperation = "source-over";
+    this.set_url();
+    this.update();
+    this.single_frame();
+  };
+
+  update = (e) => {
+    this.stop();
+    const v = this.steps[this.step][1];
+    const range = e?.srcElement || _i(`range${v ? v[0] : "?"}`);
+    if (range) {
+      this[range.variable] = Number(range.value);
+      const value = _i(`value${range.n}`);
+      if (value) value.textContent = range.value;
+      this.range_color(range);
+      step10_init();
+    }
+    this.depth = this._fp - this._np;
+    this.code2text();
+    this.start();
+  };
+
+  range_color = (range) => {
+    const p = normalize(range.value, range.min, range.max);
+    const r = 64;
+    const g = 80;
+    const b = 128;
+    const c1 = `rgb(${r},${g},${b})`;
+    const c2 = `rgb(${r + p * 64},${g - p * 32},${b - p * 64})`;
+    range.style.backgroundImage = `linear-gradient(90deg,${c1} 0%,${c2} ${p * 100}%,#444 ${p * 100}%)`;
+  };
+
+  reset = () => {
+    let range = document.getElementsByTagName("input");
+    this.vars.forEach((v, i) => {
+      this[v[0]] = v[5];
+      for (let i = 0; i < range.length; i++) {
+        if (range[i].variable === v[0]) {
+          range[i].value = v[5];
+          const value = _i(`value${range[i].n}`);
+          if (value) value.textContent = range[i].value;
+          this.range_color(range[i]);
+          break;
+        }
+      }
+    });
+    this.depth = this._fp - this._np;
+  };
+
+  code2text = () => {
+    let text = String(_i(`step${this.step}`).textContent);
+    text = text.replaceAll(`step${this.step}_`, "");
+    text = text.replace("tick", "requestAnimationFrame");
+    text = text.replaceAll("lcg", "Math.random");
+    text = text.replaceAll("sfo.", "");
+    text = text.replaceAll("vx + ", "");
+    text = text.replaceAll("vy + ", "");
+    ["(", ")", "[", "]", "{", "}"].forEach((v) => {
+      text = text.replaceAll(v, `«sy1»${v}¤`);
+    });
+    [".", ",", "'", '"', "`", ":", ";", "="].forEach((v) => {
+      text = text.replaceAll(v, `«sy2»${v}¤`);
+    });
+    ["$", "#", "@", "%", "&", "|", "<", ">"].forEach((v) => {
+      text = text.replaceAll(v, `«sy3»${v}¤`);
+    });
+    ["if", "for", "while", "continue", "return", "new", "let", "const"].forEach((v) => {
+      text = text.replaceAll(v, `«sy4»${v}¤`);
+    });
+    ["Math", "Float32Array", "requestAnimationFrame", "rgb", "hsl"].forEach((v) => {
+      text = text.replaceAll(v, `«sy5»${v}¤`);
+    });
+    ["ctx", "stars", "distance", "depth", "time", "delta"].forEach((v) => {
+      text = text.replaceAll(v, `«sy6»${v}¤`);
+    });
+    ["THRESHOLD", "CIRCLE"].forEach((v) => {
+      text = text.replaceAll(v, `«sy7»${v}¤`);
+    });
+    ["init", "draw", "clear", "get_position"].forEach((v) => {
+      text = text.replaceAll(v, `«sy8»${v}¤`);
+    });
+    this.vars
+      .map((v) => v[0])
+      .forEach((v, i) => {
+        text = text.replaceAll(v, `«var var${i}»${this[v]}¤`);
+      });
+    ["-", "+", "*", " / "].forEach((v) => {
+      text = text.replaceAll(v, `«op»${v}¤`);
+    });
+    text = text.replaceAll("*", "×");
+    text = text
+      .split("\n")
+      .map((l) => l.slice(2))
+      .join("\n");
+    text = text.replaceAll("  ", "«tab»¤");
+    text = text.split("\n").slice(1);
+    text.pop();
+    const code = _t("code")[0];
+    code.textContent = "";
+    let n = 0;
+    let count = text.length;
+    for (let i = 0; i < count; i++) {
+      if (text[i].endsWith("// REM")) continue;
+      if (text[i].endsWith("// NREM")) {
+        text[i] = text[i].replace("// NREM", "");
+        text[i] = text[i].replace("//", "");
+      }
+      const line = _c("div");
+      line.id = "line" + n;
+      line.className = "line";
+      let txt = `«nbr»${n}¤${text[i] || "&nbsp;"}`;
+      if (text[i].startsWith("//")) {
+        line.className += " rem";
+        txt = txt.replaceAll("//", "");
+      }
+      txt = txt.replaceAll("«", '<div class="');
+      txt = txt.replaceAll("»", '">');
+      txt = txt.replaceAll("¤", "</div>");
+      line.innerHTML = txt;
+      line.childNodes.forEach((e) => {
+        e.textContent = String(e.textContent).replace(" ", NBSP);
+      });
+      _a(code, line);
+      n++;
+    }
+    let hl = this.steps[this.step][2] || [];
+    count = hl.length;
+    for (let i = 0; i < count; i++) {
+      let line;
+      if (Array.isArray(hl[i])) {
+        for (let j = hl[i][0]; j <= hl[i][1]; j++) {
+          line = _i(`line${j}`);
+          if (line) line.className = "line hl1";
+        }
+      } else {
+        line = _i(`line${hl[i]}`);
+        if (line) line.className = "line hl1";
+      }
+    }
+    hl = this.steps[this.step][3] || [];
+    count = hl.length;
+    for (let i = 0; i < count; i++) {
+      let line;
+      if (Array.isArray(hl[i])) {
+        for (let j = hl[i][0]; j <= hl[i][1]; j++) {
+          line = _i(`line${j}`);
+          if (line) line.className = "line hl2";
+        }
+      } else {
+        line = _i(`line${hl[i]}`);
+        if (line) line.className = "line hl2";
+      }
+    }
+  };
+}
 
 const generate_favicon = () => {
   const dpr = window.devicePixelRatio;
@@ -143,7 +931,7 @@ const generate_logo = () => {
   canvas.height = size * dpr;
   canvas.style.width = size + "px";
   canvas.style.height = size + "px";
-  ctx = canvas.getContext("2d", { alpha: true });
+  const ctx = canvas.getContext("2d", { alpha: true });
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.lineCap = "round";
@@ -207,7 +995,7 @@ const generate_cute_star = (size) => {
   canvas.height = size * dpr;
   canvas.style.width = size + "px";
   canvas.style.height = size + "px";
-  ctx = canvas.getContext("2d", { alpha: true });
+  const ctx = canvas.getContext("2d", { alpha: true });
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.lineCap = "round";
@@ -241,11 +1029,11 @@ const generate_cute_star = (size) => {
     ctx.quadraticCurveTo(c2x, c2y, x2, y2);
   }
   ctx.closePath();
-  ctx.fillStyle = "#ec0";
+  ctx.fillStyle = "#f8c800";
   ctx.fill();
   /* eyes */
   let x = size * 0.14;
-  let y = size * 0.05;
+  let y = size * 0.0;
   const eye = size * 0.07;
   const lash = size * 0.05;
   const el = eye * 0.3;
@@ -256,22 +1044,9 @@ const generate_cute_star = (size) => {
   ctx.fillStyle = "#539";
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(
-    -x - lash,
-    -y - lash * 1.4,
-    lash,
-    CIRCLE / 4,
-    CIRCLE / 4 + CIRCLE / 10
-  );
+  ctx.arc(-x - lash, -y - lash * 1.4, lash, CIRCLE / 4, CIRCLE / 4 + CIRCLE / 10);
   ctx.moveTo(x + lash, -y);
-  ctx.arc(
-    x + lash,
-    -y - lash * 1.4,
-    lash,
-    CIRCLE / 4,
-    CIRCLE / 4 - CIRCLE / 10,
-    true
-  );
+  ctx.arc(x + lash, -y - lash * 1.4, lash, CIRCLE / 4, CIRCLE / 4 - CIRCLE / 10, true);
   ctx.lineWidth = size * 0.04;
   ctx.strokeStyle = "#539";
   ctx.stroke();
@@ -289,7 +1064,7 @@ const generate_cute_star = (size) => {
   ctx.stroke();
   /* blush */
   x = size * 0.2;
-  y = size * 0.1;
+  y = size * 0.14;
   const blush1 = size * 0.11;
   const blush2 = size * 0.08;
   ctx.beginPath();
@@ -301,764 +1076,21 @@ const generate_cute_star = (size) => {
   return canvas;
 };
 
-const generate_overlay = () => {
-  ocvs = _c("canvas");
-  ocvs.width = w * dpr;
-  ocvs.height = h * dpr;
-  octx = ocvs.getContext("2d", { alpha: false });
-  octx.imageSmoothingEnabled = true;
-  octx.imageSmoothingQuality = "high";
-  octx.lineCap = "round";
-  octx.setTransform(1, 0, 0, 1, 0, 0);
-  octx.scale(dpr, dpr);
-  /* background */
-  octx.fillStyle = `rgb(0,0,0)`;
-  octx.fillRect(0, 0, w, h);
-  /* scanline */
-  const dot = 1;
-  octx.setLineDash([0, dot * 3]);
-  //octx.lineWidth = dot * 1.2;
-  //overlay_rgb(dot, 64, 0.4);
-  octx.lineWidth = dot;
-  overlay_rgb(dot, 96, 1);
-};
-
-const overlay_rgb = (dot, c, alpha) => {
-  /* R */
-  octx.strokeStyle = `rgba(255.999,${c},${c},${alpha})`;
-  y = dot / 2;
-  for (let i = 0; i < h; i++) {
-    octx.beginPath();
-    octx.moveTo(0, y);
-    octx.lineTo(w, y);
-    octx.lineDashOffset = i % 2 === 0 ? 0 : dot * 1.5;
-    octx.stroke();
-    y += dot;
-  }
-  /* G */
-  octx.strokeStyle = `rgba(${c},255.999,${c},${alpha})`;
-  y = dot / 2;
-  for (let i = 0; i < h; i++) {
-    octx.beginPath();
-    octx.moveTo(0, y);
-    octx.lineTo(w, y);
-    octx.lineDashOffset = dot + (i % 2 === 0 ? 0 : dot * 1.5);
-    octx.stroke();
-    y += dot;
-  }
-  /* B */
-  octx.strokeStyle = `rgba(${c},${c},255.999,${alpha})`;
-  y = dot / 2;
-  for (let i = 0; i < h; i++) {
-    octx.beginPath();
-    octx.moveTo(0, y);
-    octx.lineTo(w, y);
-    octx.lineDashOffset = dot * 2 + (i % 2 === 0 ? 0 : dot * 1.5);
-    octx.stroke();
-    y += dot;
-  }
-};
-
-function mousedown(e) {
-  window.mx = e.pageX - sf.offsetLeft - sf.width / 2;
-  window.my = e.pageY - sf.offsetTop - sf.height / 2;
-  if (!window.shift) {
-    window.drag = true;
-  } else {
-    window.drago = true;
-  }
-  sf.style.cursor = "grab";
-  start();
-}
-
-function mouseup() {
-  window.mx = 0;
-  window.my = 0;
-  if (window.drag) {
-    for (let i = 0; i < window.stars.length; i++) {
-      window.stars[i][0] += window.px;
-      window.stars[i][1] += window.py;
-    }
-    window.vx += window.px;
-    window.vy += window.py;
-    window.drag = false;
-  } else if (window.drago) {
-    window.ox += window.px;
-    window.oy += window.py;
-    window.drago = false;
-  }
-  window.px = 0;
-  window.py = 0;
-  _i("starfield").style.cursor = "crosshair";
-  set_url();
-  for (let i = 0; i < 4; i++) {
-    start();
-  }
-}
-
-function mousemove(e) {
-  x = e.pageX - window.mx - sf.offsetLeft - sf.width / 2;
-  y = e.pageY - window.my - sf.offsetTop - sf.height / 2;
-  if (window.drag || window.drago) {
-    window.px = x;
-    window.py = y;
-  }
-}
-
-function mousewheel(e) {
-  e.preventDefault();
-  clearTimeout(window.timeout);
-  if (!window.wheel) {
-    window.wheel = true;
-    start();
-  }
-  window.distance -= (e.deltaY / 2 ** 12) * window._f;
-  window.distance = window.distance % (window.depth * 2);
-  window.timeout = setTimeout(() => {
-    window.wheel = false;
-    set_url();
-  }, 250);
-}
-
 const init = () => {
+  let font = new FontFace("hud", "url(fonts/chakra_petch.ttf)");
+  font.load().then(function (font) {
+    document.fonts.add(font);
+  });
+  font = new FontFace("hud", "url(fonts/hud.woff2)");
+  font.load().then(function (font) {
+    document.fonts.add(font);
+  });
   generate_favicon();
   generate_logo();
-  cute_star = generate_cute_star(128);
+  const cute_star = generate_cute_star(128);
   _i("cute_star").src = cute_star.toDataURL();
   _i("version").textContent = `v${VERSION.join(".")}`;
-  /* init canvas */
-  dpr = window.devicePixelRatio;
-  sf = _i("starfield");
-  ctx = sf.getContext("2d", { alpha: false });
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.lineCap = "round";
-  /* steps */
-  vars.forEach((v) => {
-    window[v[0]] = Number(url.get(v[0].slice(1)) || v[5]);
-    //window[v[0]] = v[5];
-  });
-  steps.forEach((v, i) => {
-    const btn = _c("input");
-    btn.type = "button";
-    btn.id = `step${i}_btn`;
-    btn.className = "step";
-    btn.value = `step${i}: ${v[0]}`;
-    _a(_i("steps"), btn);
-    btn.addEventListener("click", () => {
-      run(i);
-    });
-  });
-  /* events */
-  _i("motion").addEventListener("change", () => {
-    set_pause(!pause);
-  });
-  _i("overlay").addEventListener("change", () => {
-    set_overlay(!overlay);
-  });
-  _i("debug").addEventListener("change", () => {
-    set_debug(!debug);
-  });
-  addEventListener("resize", resize);
-  addEventListener("keydown", keydown);
-  addEventListener("keyup", keyup);
-  addEventListener("drop", () => false);
-  addEventListener("mousemove", mousemove);
-  sf.addEventListener("mousedown", mousedown);
-  addEventListener("mouseup", mouseup);
-  sf.addEventListener("mousewheel", mousewheel);
-  /* start */
-  step12_init();
-  resize();
-  set_pause(pause);
-  set_overlay(overlay);
-  set_debug(debug);
-  run(step);
   _i("root").style.visibility = "visible";
-};
-
-const reset = () => {
-  let range = document.getElementsByTagName("input");
-  vars.forEach((v, i) => {
-    window[v[0]] = v[5];
-    for (let i = 0; i < range.length; i++) {
-      if (range[i].variable === v[0]) {
-        range[i].value = v[5];
-        const value = _i(`value${range[i].n}`);
-        if (value) {
-          value.textContent = range[i].value;
-        }
-        range_color(range[i]);
-        break;
-      }
-    }
-  });
-};
-
-const resize = () => {
-  const style = getComputedStyle(document.body);
-  const padding = parseInt(style.getPropertyValue("--padding"));
-  const margin = parseInt(style.getPropertyValue("--margin"));
-  const border = parseInt(style.getPropertyValue("--border"));
-  const var_h = parseInt(style.getPropertyValue("--slider-height"));
-  const var_m = parseInt(style.getPropertyValue("--slider-margin"));
-  w = sf.offsetWidth;
-  h = sf.offsetHeight;
-  ox = w / 2 + Number(url.get("ox"));
-  oy = h / 2 - Number(url.get("oy"));
-  sf.width = w * dpr;
-  sf.height = h * dpr;
-  sf.style.width = w + "px";
-  sf.style.height = h + "px";
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-  ctx.translate(ox, oy);
-  generate_overlay();
-  single_frame();
-};
-
-const run = (id) => {
-  stop();
-  for (let i = 0; i <= vars.length; i++) {
-    _r(_i("slider" + i));
-    _r(_i("list" + i));
-  }
-  let btn = _i(`step${step}_btn`);
-  if (btn) {
-    btn.disabled = false;
-  }
-  step = parseInt(id || 0);
-  btn = _i(`step${step}_btn`);
-  if (!btn) {
-    return;
-  }
-  btn.disabled = true;
-  const variables = _i("variables");
-  let n = 0;
-  for (let i = 0; i <= step; i++) {
-    const v = steps[i][1];
-    if (!v) continue;
-    for (let j = 0; j < v.length; j++) {
-      const [name, text, min, max, step] = vars[v[j]];
-      const slider = _c("form");
-      slider.id = "slider" + n;
-      slider.className = "slider";
-      _a(variables, slider);
-      const label = _c("label");
-      label.id = "label" + n;
-      label.setAttribute("for", "range" + n);
-      label.textContent = text;
-      label.style.float = "left";
-      _a(slider, label);
-      const range = _c("input");
-      range.type = "range";
-      range.id = "range" + n;
-      range.n = n;
-      range.variable = name;
-      range.min = min;
-      range.max = max;
-      range.step = step;
-      range.addEventListener("input", update);
-      _a(slider, range);
-      range.value = window[range.variable];
-      range_color(range);
-      const value = _c("output");
-      value.id = "value" + n;
-      value.textContent = range.value;
-      value.className = "var var" + n;
-      _a(slider, value);
-      n++;
-    }
-  }
-  ctx.globalCompositeOperation = "source-over";
-  set_url();
-  update();
-  single_frame();
-};
-
-const set_url = (e) => {
-  const title =
-    "starfield" + (step > 0 ? ` > step${step}: ${steps[step][0]}` : "");
-  document.title = title;
-  let params = [
-    step > 0 ? "step=" + step : null,
-    _nb !== vars[0][5] ? "nb=" + _nb : null,
-    vx !== 0 ? "x=" + vx : null,
-    vy !== 0 ? "y=" + vy : null,
-    ox !== w / 2 ? "ox=" + (ox - w / 2) : null,
-    oy !== h / 2 ? "oy=" + -(oy - h / 2) : null, // Y up!
-    distance !== 232 ? "distance=" + Math.round(distance) : null,
-    pause ? "pause=true" : null,
-    overlay ? "overlay=true" : null,
-    debug ? "debug=true" : null,
-  ];
-  params = params.filter((p) => p !== null);
-  history.replaceState(
-    { data: "" },
-    title,
-    root + (params.length > 0 ? "?" : "") + params.join("&")
-  );
-};
-
-const update = (e) => {
-  stop();
-  const v = steps[step][1];
-  const range = e?.srcElement || _i("range" + (v ? v[0] : "?"));
-  if (range) {
-    window[range.variable] = Number(range.value);
-    const value = _i("value" + range.n);
-    if (value) {
-      value.textContent = range.value;
-    }
-    range_color(range);
-    step12_init();
-  }
-  code2text();
-  start();
-};
-
-const range_color = (range) => {
-  const p = normalize(range.value, range.min, range.max);
-  const r = 64;
-  const g = 80;
-  const b = 128;
-  const c1 = `rgb(${r},${g},${b})`;
-  const c2 = `rgb(${r + p * 64},${g - p * 32},${b - p * 64})`;
-  range.style.backgroundImage = `linear-gradient(90deg,${c1} 0%,${c2} ${
-    p * 100
-  }%,#444 ${p * 100}%)`;
-};
-
-const tick = (fn) => {
-  rt[rti] = Math.min(1000 / (time - delta), rtmax);
-  rti = (rti + 1) % rtc;
-  if (
-    window.drag ||
-    window.drago ||
-    window.wheel ||
-    (step > 5 && !window.pause)
-  ) {
-    window.rid = requestAnimationFrame(fn);
-  }
-};
-
-const single_frame = () => {
-  const opacity = window["_o"];
-  window["_o"] = 1;
-  start();
-  window["_o"] = opacity;
-};
-
-const start = () => {
-  stop();
-  window.time = performance.now();
-  window[`step${window.step}_draw`]();
-};
-
-const stop = () => {
-  cancelAnimationFrame(window.rid);
-  window.rid = undefined;
-};
-
-const set_pause = (state) => {
-  window.pause = state;
-  _i("motion").checked = !window.pause;
-  set_url();
-  if (window.pause) {
-    single_frame();
-  } else {
-    start();
-  }
-};
-
-const set_overlay = (state) => {
-  window.overlay = state;
-  _i("overlay").checked = window.overlay;
-  set_url();
-  single_frame();
-};
-
-const set_debug = (state) => {
-  window.debug = state;
-  _i("debug").checked = window.debug;
-  set_url();
-  single_frame();
-};
-
-const code2text = () => {
-  let text = String(_i("step" + step).textContent);
-  text = text.replaceAll("step" + step + "_", "");
-  text = text.replace("tick", "requestAnimationFrame");
-  text = text.replaceAll("lcg", "Math.random");
-  text = text.replaceAll("vx + ", "");
-  text = text.replaceAll("vy + ", "");
-  ["(", ")", "[", "]", "{", "}"].forEach((v) => {
-    text = text.replaceAll(v, "«sy1»" + v + "¤");
-  });
-  [".", ",", "'", "`", ":", ";", "="].forEach((v) => {
-    text = text.replaceAll(v, "«sy2»" + v + "¤");
-  });
-  ["$", "#", "@", "%", "&", "|", "<", ">"].forEach((v) => {
-    text = text.replaceAll(v, "«sy3»" + v + "¤");
-  });
-  ["if", "for", "continue", "return", "new", "let", "const"].forEach((v) => {
-    text = text.replaceAll(v, "«sy4»" + v + "¤");
-  });
-  ["Math", "Float32Array", "requestAnimationFrame"].forEach((v) => {
-    text = text.replaceAll(v, "«sy5»" + v + "¤");
-  });
-  ["ctx", "stars", "distance", "depth", "dof"].forEach((v) => {
-    text = text.replaceAll(v, "«sy6»" + v + "¤");
-  });
-  ["THRESHOLD", "CIRCLE"].forEach((v) => {
-    text = text.replaceAll(v, "«sy7»" + v + "¤");
-  });
-  ["init", "draw", "clear", "get_position"].forEach((v) => {
-    text = text.replaceAll(v, "«sy8»" + v + "¤");
-  });
-  vars
-    .map((v) => v[0])
-    .forEach((v, i) => {
-      text = text.replaceAll(v, "«var var" + i + "»" + window[v] + "¤");
-    });
-  ["-", "+", "*", " / "].forEach((v) => {
-    text = text.replaceAll(v, "«op»" + v + "¤");
-  });
-  text = text
-    .split("\n")
-    .map((l) => l.slice(2))
-    .join("\n");
-  text = text.replaceAll("  ", "«tab»│ ¤");
-  text = text.split("\n").slice(1);
-  text.pop();
-  const code = _t("code")[0];
-  code.textContent = "";
-  let n = 0;
-  for (let i = 0; i < text.length; i++) {
-    if (text[i].endsWith("// REM")) continue;
-    if (text[i].endsWith("// NREM")) {
-      text[i] = text[i].replace("// NREM", "");
-      text[i] = text[i].replace("//", "");
-    }
-    const line = _c("div");
-    line.id = "line" + n;
-    line.className = "line";
-    let txt = "«nbr»" + n + "¤" + text[i] || "&nbsp;";
-    if (text[i].startsWith("//")) {
-      line.className += " rem";
-      txt = txt.replaceAll("//", "");
-    }
-    txt = txt.replaceAll("«", '<div class="');
-    txt = txt.replaceAll("»", '">');
-    txt = txt.replaceAll("¤", "</div>");
-    line.innerHTML = txt;
-    line.childNodes.forEach((e) => {
-      e.textContent = String(e.textContent).replace(" ", NBSP);
-    });
-    _a(code, line);
-    n++;
-  }
-  let hl = steps[step][2] || [];
-  for (let i = 0; i < hl.length; i++) {
-    const line = _i("line" + hl[i]);
-    if (line) line.className = "line hl1";
-  }
-  hl = steps[step][3] || [];
-  for (let i = 0; i < hl.length; i++) {
-    const line = _i("line" + hl[i]);
-    if (line) line.className = "line hl2";
-  }
-};
-
-const keydown = (e) => {
-  shift = e.shiftKey;
-  key = e.key;
-  let id;
-  switch (e.key) {
-    case "Escape":
-    case "d":
-      if (shift) {
-        const root = _i("root");
-        root.className = root.className === "" ? "debug" : "";
-      } else {
-        set_debug(!debug);
-      }
-      break;
-    case "o":
-      set_overlay(!overlay);
-      break;
-    case "Enter":
-    case "p":
-      set_pause(!pause);
-      break;
-    case "ArrowUp":
-      run((step + steps.length - 1) % steps.length);
-      break;
-    case "ArrowDown":
-      run((step + 1) % steps.length);
-      break;
-    case "ArrowLeft":
-      star_n = (star_n + _nb - 1) % _nb;
-      single_frame();
-      break;
-    case "ArrowRight":
-      star_n = (star_n + 1) % _nb;
-      single_frame();
-      break;
-    case "c":
-      ox = w / 2;
-      oy = h / 2;
-      vx = 0;
-      vy = 0;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      ctx.translate(ox, oy);
-      set_url();
-      step12_init();
-      single_frame();
-      break;
-    case "r":
-      reset();
-      set_url();
-      code2text();
-      step12_init();
-      single_frame();
-      break;
-  }
-};
-
-const keyup = (e) => {
-  shift = e.shiftKey;
-  key = e.key;
-};
-
-get_p = (x, y, z) => {
-  if (drag) {
-    x += px;
-    y += py;
-  }
-  depth = _fp - _np;
-  z -= distance % depth;
-  if (z < _np) {
-    z += depth;
-  } else if (z > _fp) {
-    z -= depth;
-  }
-  return [x, y, z];
-};
-
-translate = () => {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-  x = ox + (drago ? px : 0);
-  y = oy + (drago ? py : 0);
-  ctx.translate(x, y);
-};
-
-update_distance = () => {
-  if (!pause) {
-    distance += ((time - delta) / 1000) * _m;
-    distance = distance % (depth * 2);
-  }
-};
-
-overlay_draw = () => {
-  if (!overlay) {
-    return;
-  }
-  x = -ox - (drago ? px : 0);
-  y = -oy - (drago ? py : 0);
-  ctx.globalCompositeOperation = "overlay";
-  ctx.globalAlpha = _o;
-  ctx.drawImage(ocvs, 0, 0, w * dpr, h * dpr, x, y, w * dpr, h * dpr);
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = "source-over";
-};
-
-debug_draw = () => {
-  if (!debug) {
-    return;
-  }
-  const m = 4;
-  ctx.globalCompositeOperation = "source-over";
-  ctx.lineWidth = 2;
-  ctx.textAlign = "center";
-  ctx.font = "16px/16px hud";
-  ctx.strokeStyle = "#5c0";
-  ctx.fillStyle = "#5c0";
-  let x0, y0, z0, r0, s0;
-  let x1, y1, z1, r1, s1;
-  let x2, y2, z2, r2, s2;
-  x = drag ? px : 0;
-  y = drag ? py : 0;
-  if (step === 1) {
-    x0 = drago ? px : vx;
-    y0 = drago ? py : vy;
-    x0 = vx + x;
-    y0 = vy + y;
-    x1 = vx + x - _w / 2 - m;
-    y1 = vy + y - _w / 2 - m;
-    s1 = _w + m * 2;
-  } else if (step === 2) {
-    x0 = (vx + x) / oz;
-    y0 = (vy + y) / oz;
-    x1 = (vx + x - _w / 2) / _fp - m;
-    y1 = (vy + y - _w / 2) / _fp - m;
-    s1 = _w / _fp + m * 2;
-    x2 = (vx + x - _w / 2) / _np - m;
-    y2 = (vy + y - _w / 2) / _np - m;
-    s2 = _w / _np + m * 2;
-  } else {
-    r0 = _f / oz;
-    x0 = (vx + x) * r0;
-    y0 = (vy + y) * r0;
-    r1 = _f / _fp;
-    x1 = (vx + x - _w / 2) * r1 - m;
-    y1 = (vy + y - _w / 2) * r1 - m;
-    s1 = _w * r1 + m * 2;
-    r2 = _f / _np;
-    x2 = (vx + x - _w / 2) * r2 - m;
-    y2 = (vy + y - _w / 2) * r2 - m;
-    s2 = _w * r2 + m * 2;
-  }
-  if (step === 0) {
-    //ctx.fillText('HEY!', 48, -40);
-  } else if (step === 1) {
-    ctx.strokeRect(x1, y1, s1, s1);
-    ctx.fillText(_w + "×" + _w, x1 + s1 / 2, y1 - 5);
-  } else {
-    ctx.beginPath();
-    ctx.rect(x1, y1, s1, s1);
-    ctx.rect(x2, y2, s2, s2);
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.moveTo(x1 + s1, y1);
-    ctx.lineTo(x2 + s2, y2);
-    ctx.moveTo(x1 + s1, y1 + s1);
-    ctx.lineTo(x2 + s2, y2 + s2);
-    ctx.moveTo(x1, y1 + s1);
-    ctx.lineTo(x2, y2 + s2);
-    ctx.stroke();
-    ctx.fillText(_w + "×" + _w + "×" + (_fp - _np), x1 + s1 / 2, y1 - 4);
-  }
-  if (step > 1) {
-    ctx.beginPath();
-    ctx.moveTo(x0 - m, y0);
-    ctx.lineTo(x0 + m, y0);
-    ctx.moveTo(x0, y0 - m);
-    ctx.lineTo(x0, y0 + m);
-    ctx.stroke();
-    ctx.lineDashOffset = 2;
-    ctx.setLineDash([2, 8]);
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1 + s1 / 2, y1 + s1 / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.arc(x1 + s1 / 2, y1 + s1 / 2, (_w / 128) * r1, 0, CIRCLE);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x2 + s2 / 2, y2 + s2 / 2, (_w / 128) * r2, 0, CIRCLE);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x2 + s2 / 2, y2 + s2 / 2, 2, 0, CIRCLE);
-    ctx.stroke();
-    ctx.lineDashOffset = 8;
-    ctx.setLineDash([8, 8]);
-    ctx.beginPath();
-    ctx.moveTo(x1 + s1 / 2, y1 + s1 / 2);
-    ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  /* origin */
-  x = Math.round(ox - w / 2 + (drago ? px : 0));
-  y = Math.round(oy - h / 2 + (drago ? py : 0));
-  ctx.fillText(x + "×" + -y, x0, y0 + 16);
-  /* center */
-  if (step === 12) {
-    ctx.beginPath();
-    ctx.arc(x1 + s1 / 2, y1 + s1 / 2, (_w / 8) * r1, 0, CIRCLE);
-    ctx.setLineDash([s1 / 64, s1 / 64]);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x2 + s2 / 2, y2 + s2 / 2, (_w / 8) * r2, 0, CIRCLE);
-    ctx.setLineDash([s2 / 64, s2 / 64]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  /* depth */
-  if (step > 7) {
-    x = drag ? px : 0;
-    y = drag ? py : 0;
-    r1 = _f / (_np + _dof * depth);
-    x1 = (vx + x - _w / 2) * r1;
-    y1 = (vy + y - _w / 2) * r1;
-    s1 = _w * r1;
-    ctx.beginPath();
-    ctx.rect(x1 - 2, y1 - 2, s1 + 4, s1 + 4);
-    if (step === 12) {
-      ctx.moveTo(x1 + s1 / 2 + s1 / 8, y1 + s1 / 2);
-      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, s1 / 8, 0, CIRCLE);
-    }
-    ctx.setLineDash([s1 / 64, s1 / 64]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  /* star position */
-  star_n = star_n % _nb;
-  if (stars[star_n]) {
-    ctx.strokeStyle = "#e50";
-    ctx.fillStyle = "#e50";
-    ctx.textAlign = "center";
-    let p = Math.round(stars[star_n][0] - vx);
-    p += "×" + Math.round(stars[star_n][1] - vy);
-    [x, y, z] = get_position(stars[star_n]);
-    p += "×" + Math.round(z);
-    z = step > 1 ? z : _fp;
-    r = step !== 2 ? _f / z : 1 / z;
-    x *= r;
-    y *= r;
-    s1 = _s * r * 2 + m * 2;
-    s2 = _g * r + m * 2;
-    if (step > 0) {
-      ctx.strokeRect(x - s1 / 2, y - s1 / 2, s1, s1);
-      if (step < 7) {
-        ctx.fillText(p, x, y - s1 / 2 - 4);
-      }
-    }
-    if (step > 6) {
-      ctx.strokeRect(x - s2 / 2, y - s2 / 2, s2, s2);
-      ctx.fillText(p, x, y - s2 / 2 - 4);
-    }
-  }
-  /* rendertime */
-  x = (drago ? -px : 0) - ox + w - 8;
-  y = (drago ? -py : 0) - oy + 8;
-  ctx.strokeStyle = "#d90";
-  ctx.fillStyle = "#d90";
-  squircle(ctx, x - rtc, y, rtc, rth, 3);
-  ctx.stroke();
-  ctx.save();
-  ctx.clip();
-  ctx.beginPath();
-  let rtm = 0;
-  for (let i = 0; i < rtc; i++) {
-    let k = rti + i;
-    if (k > rtc - 1) {
-      k -= rtc;
-    }
-    const v = (rth / rtmax) * rt[k];
-    ctx.rect(x - rtc - 1 + i, y + rth - v - 1, 2, 2);
-    if (i > rtc - 33) {
-      rtm += rt[k];
-    }
-  }
-  ctx.fill();
-  ctx.restore();
-  ctx.textAlign = "right";
-  ctx.fillText(Math.floor(rtm / 32), x - m, y + m + 12);
-  /* distance */
-  ctx.fillText(Math.round(distance) + " LY", x, y + h - 16);
+  window.sfo = new Starfield();
+  sfo.init();
 };
