@@ -126,7 +126,6 @@ select {
 input {
   appearance: none;
   background-color: #555;
-  font: normal 12px/12px;
   outline: none;
 }
 
@@ -142,7 +141,7 @@ input[type="range"]::-webkit-slider-thumb {
   height: var(--input-range-size);
   border-radius: 50%;
   background-color: var(--color-text);
-  box-shadow: 0 0 4px var(--color-text-shadow);
+  box-shadow: 0 0 2px var(--color-text-shadow);
 }
 
 label {
@@ -692,6 +691,6 @@ code > div {
   border-color: var(--color-rainbow-8) !important;
 }
 
-vdebug * > * > * > * > * > * > * > * {
+.debug * > * > * > * > * > * > * > * {
   border-color: var(--color-rainbow-1) !important;
 }

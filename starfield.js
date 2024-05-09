@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = [0, 1, 2];
+const VERSION = [0, 1, 3];
 
 /* DOM manipulation shortcuts */
 const _i = (id) => document.getElementById(String(id));
@@ -23,28 +23,63 @@ const lcg = () => {
   window.seed = (LCG_MUL * window.seed + LCG_INC) % LCG_MOD;
   return window.seed / LCG_MOD;
 };
+const format = (nbr, decimal = 1) => {
+  const sign = Number(nbr) < 0 ? "-" : "";
+  const n = Math.abs(Number(nbr) || 0);
+  if (n < 1e-3 && n !== 0) return `${sign}${n.toExponential(decimal)}`;
+  if (n >= 0 && n < 1e3) return `${sign}${Number(Number(n).toFixed(decimal))}`;
+  if (n >= 1e3 && n < 1e6) return `${sign}${Number(Number(n / 1e3).toFixed(decimal))}K`; // thousand
+  if (n >= 1e6 && n < 1e9) return `${sign}${Number(Number(n / 1e6).toFixed(decimal))}M`; // million
+  if (n >= 1e9 && n < 1e12) return `${sign}${Number(Number(n / 1e9).toFixed(decimal))}B`; // billion
+  if (n >= 1e12) return `${sign}${Number(Number(n / 1e12).toFixed(decimal))}T`; // trillion
+  return `${sign}${Number(n)}`;
+};
+
+const SCALE = [1, 2, 2.5, 4, 5, 8, 10];
+
+const scale = (n, inverse = false) => {
+  let nbr = n;
+  let div = 1;
+  if (Math.abs(n) < 1) {
+    const decimal = 6;
+    nbr = Number(n.toFixed(6).split(".")[1]);
+    div = 1 / Math.pow(10, decimal);
+  }
+  const mul = Math.pow(10, String(Math.round(nbr)).length - 1);
+  if (!inverse) {
+    for (let i = 0; i < SCALE.length; i += 1) {
+      if (SCALE[i] * mul >= nbr) return SCALE[i] * mul * div;
+    }
+  } else {
+    for (let i = SCALE.length - 1; i >= 0; i -= 1) {
+      if (SCALE[i] * mul < nbr) return SCALE[i] * mul * div;
+    }
+  }
+  return mul;
+};
 
 class Starfield {
   SPACE = 256;
-  DISTANCE = 444;
+  DISTANCE = 0;
   path = "starfield";
   stars = [];
   vars = [
-    ["_nb", "number", 0, 4096, 8, 1024],
+    ["_nb", "number", 0, 2048, 8, 1024],
     ["_s", "size", 0.01, 1, 0.01, 0.5],
     ["_w", "space", 8, this.SPACE * 2, 1, this.SPACE],
-    ["_fp", "far_p", 8, this.SPACE * 2, 1, this.SPACE],
-    ["_np", "near_p", 1, this.SPACE * 2, 1, 8],
-    ["_f", "focale", 1, 1024, 1, 256],
+    ["_fp", "far_p", 8, this.SPACE * 2, 1, this.SPACE * 2],
+    ["_np", "near_p", 1, this.SPACE * 2, 1, 1],
+    ["_f", "focale", 1, 1024, 1, this.SPACE * 2],
     ["_cl", "light", 0.01, 6, 0.01, 3],
-    ["_m", "motion", -64, 64, 1, 8],
+    ["_mo", "motion", -64, 64, 1, 16],
     ["_o", "opacity", 0.01, 1, 0.01, 0.5],
-    ["_g", "gradient", 1, 24, 0.1, 12],
-    ["_h", "halo", 0.01, 0.5, 0.01, 0.1],
-    ["_dof", "dof", 0.01, 1, 0.01, 0.15],
-    ["_cs", "color", 0, 1, 0.01, 0.6],
-    ["_cy", "cycle", 0, 360, 1, 120],
-    ["_k", "spike", 2, 16, 0.1, 6],
+    ["_g", "gradient", 4, 24, 0.1, 14],
+    ["_hl", "halo", 0.01, 0.5, 0.01, 0.1],
+    ["_dof", "dof", 0.01, 1, 0.01, 0.1],
+    ["_cs", "color", 0, 1, 0.01, 0.5],
+    ["_cy", "cycle", 0, 360, 1, 180],
+    ["_mi", "mirror", 0, 2, 0.01, 1],
+    ["_ho", "horizon", 0, 32, 1, 16],
   ];
   steps = [
     ["intro", null, [6, 11, 19], [3]],
@@ -52,14 +87,15 @@ class Starfield {
     ["depth", [3, 4], [6, 17], [1]],
     ["focale", [5], [6, 8]],
     ["light", [6], [7, 8], [16]],
-    ["sorting", null, [4, [15, 23]]],
-    ["motion", [7, 8], [4, [13, 16], [19, 28]], [1]],
+    ["sorting", null, [[15, 23]], [4]],
+    ["motion", [7, 8], [1, [13, 16], [19, 28]], [4]],
     ["gradient", [9, 10], [[12, 20]]],
     ["dof", [11], [[12, 15]]],
     ["blending", null, [1, [29, 34]]],
     ["color", [12, 13], [8, 9, 24, 25, [31, 34], 46]],
-    ["spikes", [14], [[24, 51]]],
-    ["mirror", [], []],
+    ["spikes", null, [[24, 51]]],
+    ["mirror", [14], [[25, 34]], [10]],
+    ["horizon", [15], [], []],
   ];
   px = 0;
   py = 0;
@@ -193,9 +229,7 @@ class Starfield {
     this.py = 0;
     this.cvs.style.cursor = "crosshair";
     this.set_url();
-    for (let i = 0; i < 4; i++) {
-      this.start();
-    }
+    for (let i = 0; i < 4; i++) this.start();
   }
 
   mousemove(e) {
@@ -214,7 +248,7 @@ class Starfield {
       this.wheel = true;
       this.start();
     }
-    this.distance -= (e.deltaY / 2 ** 12) * this._f;
+    this.distance -= (e.deltaY / 2 ** 15) * this._f * this._mo;
     this.timeout = setTimeout(() => {
       this.wheel = false;
       this.set_url();
@@ -238,6 +272,9 @@ class Starfield {
 
   keydown = (e) => {
     this.shift = e.shiftKey;
+    this.ctrl = e.ctrlKey;
+    this.alt = e.altKey;
+    this.meta = e.metaKey;
     this.key = e.key;
     switch (e.key) {
       case "Escape":
@@ -290,11 +327,11 @@ class Starfield {
         }
         break;
       case "PageUp":
-        this.distance = Math.round(this.distance + 1);
+        this.distance = Math.round(this.distance + this._mo);
         this.start();
         break;
       case "PageDown":
-        this.distance = Math.round(this.distance - 1);
+        this.distance = Math.round(this.distance - this._mo);
         this.start();
         break;
       case "c":
@@ -310,6 +347,7 @@ class Starfield {
         this.single_frame();
         break;
       case "r":
+        if (this.meta) break;
         this.reset();
         this.set_url();
         this.code2text();
@@ -363,20 +401,20 @@ class Starfield {
     this.octx.setTransform(1, 0, 0, 1, 0, 0);
     this.octx.scale(this.dpr, this.dpr);
     /* background */
-    this.octx.fillStyle = `rgb(0,0,0)`;
+    this.octx.fillStyle = `rgb(0 0 0)`;
     this.octx.fillRect(0, 0, this.w, this.h);
     /* scanline */
     const dot = 1;
     this.octx.setLineDash([0, dot * 3]);
-    //this.octx.lineWidth = dot * 1.2;
-    //this.overlay_rgb(dot, 64, 0.4);
-    this.octx.lineWidth = dot;
+    this.octx.lineWidth = dot * 1.2;
+    this.overlay_rgb(dot, 32, 1);
+    this.octx.lineWidth = dot * 0.8;
     this.overlay_rgb(dot, 96, 1);
   };
 
   overlay_rgb = (dot, c, alpha) => {
     /* R */
-    this.octx.strokeStyle = `rgba(255.999,${c},${c},${alpha})`;
+    this.octx.strokeStyle = `rgba(${c * 4},${c},${c},${alpha})`;
     let y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -387,7 +425,7 @@ class Starfield {
       y += dot;
     }
     /* G */
-    this.octx.strokeStyle = `rgba(${c},255.999,${c},${alpha})`;
+    this.octx.strokeStyle = `rgba(${c},${c * 4},${c},${alpha})`;
     y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -398,7 +436,7 @@ class Starfield {
       y += dot;
     }
     /* B */
-    this.octx.strokeStyle = `rgba(${c},${c},255.999,${alpha})`;
+    this.octx.strokeStyle = `rgba(${c},${c},${c * 4},${alpha})`;
     y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -411,16 +449,18 @@ class Starfield {
   };
 
   single_frame = () => {
+    if (!this.fn) return;
     const opacity = this._o;
     this._o = 1;
-    window[`step${this.step}_draw`]();
+    this.fn();
     this._o = opacity;
   };
 
   start = () => {
+    if (!this.fn) return;
     this.time = performance.now();
     cancelAnimationFrame(this.rid);
-    this.rid = requestAnimationFrame(window[`step${this.step}_draw`].bind(this));
+    this.rid = requestAnimationFrame(this.fn.bind(this));
   };
 
   stop = () => {
@@ -432,9 +472,7 @@ class Starfield {
     this.rt[this.rti] = Math.min(1000 / (this.time - this.delta), this.rtmax);
     this.rti = (this.rti + 1) % this.rtc;
     cancelAnimationFrame(this.rid);
-    if (this.drag || this.drago || this.wheel || (this.step > 5 && !this.pause)) {
-      this.rid = requestAnimationFrame(fn);
-    }
+    if (this.drag || this.drago || this.wheel || (this.step > 5 && !this.pause)) this.rid = requestAnimationFrame(fn);
   };
 
   get_p = (x, y, z) => {
@@ -459,7 +497,7 @@ class Starfield {
 
   update_distance = () => {
     if (this.pause) return;
-    this.distance += ((this.time - this.delta) / 1000) * this._m;
+    this.distance += ((this.time - this.delta) / 1000) * this._mo;
   };
 
   overlay_draw = () => {
@@ -529,12 +567,12 @@ class Starfield {
       y2 = (vy + y - _w / 2) * r2 - m;
       s2 = _w * r2 + m * 2;
     }
+    /* grid */
     ctx.strokeStyle = "#c50";
     x = (drago ? -px : 0) - ox;
     y = (drago ? -py : 0) - oy;
-    squircle(ctx, x + 1, y + 1, w - 2, h - 2, 6);
-    ctx.stroke();
     ctx.setLineDash([2, 4]);
+    ctx.beginPath();
     ctx.moveTo(x + w / 2, y + 2);
     ctx.lineTo(x + w / 2, y + h - 4);
     ctx.moveTo(x + 2, y + h / 2);
@@ -598,18 +636,6 @@ class Starfield {
     x = Math.round(ox - w / 2 + (drago ? px : 0));
     y = Math.round(oy - h / 2 + (drago ? py : 0));
     ctx.fillText(x + "×" + -y, x0, y0 + 16);
-    /* center */
-    if (step === 12) {
-      ctx.beginPath();
-      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, (_w / 8) * r1, 0, CIRCLE);
-      ctx.setLineDash([s1 / 64, s1 / 64]);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, (_w / 8) * r2, 0, CIRCLE);
-      ctx.setLineDash([s2 / 64, s2 / 64]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
     /* depth */
     if (step > 7) {
       x = drag ? px : 0;
@@ -620,10 +646,6 @@ class Starfield {
       s1 = _w * r1;
       ctx.beginPath();
       ctx.rect(x1 - 2, y1 - 2, s1 + 4, s1 + 4);
-      if (step === 12) {
-        ctx.moveTo(x1 + s1 / 2 + s1 / 8, y1 + s1 / 2);
-        ctx.arc(x1 + s1 / 2, y1 + s1 / 2, s1 / 8, 0, CIRCLE);
-      }
       ctx.setLineDash([s1 / 64, s1 / 64]);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -646,9 +668,7 @@ class Starfield {
       s2 = _g * r + m * 2;
       if (step > 0) {
         ctx.strokeRect(x - s1 / 2, y - s1 / 2, s1, s1);
-        if (step < 7) {
-          ctx.fillText(p, x, y - s1 / 2 - 4);
-        }
+        if (step < 7) ctx.fillText(p, x, y - s1 / 2 - 4);
       }
       if (step > 6) {
         ctx.strokeRect(x - s2 / 2, y - s2 / 2, s2, s2);
@@ -668,21 +688,23 @@ class Starfield {
     let rtm = 0;
     for (let i = 0; i < rtc; i++) {
       let k = rti + i;
-      if (k > rtc - 1) {
-        k -= rtc;
-      }
+      if (k > rtc - 1) k -= rtc;
       const v = (rth / rtmax) * rt[k];
       ctx.rect(x - rtc - 1 + i, y + rth - v - 1, 2, 2);
-      if (i > rtc - 33) {
-        rtm += rt[k];
-      }
+      if (i > rtc - 33) rtm += rt[k];
     }
     ctx.fill();
     ctx.restore();
     ctx.textAlign = "right";
     ctx.fillText(Math.floor(rtm / 32), x - m, y + m + 12);
     /* distance */
-    ctx.fillText(`${Math.round(distance)} LY`, x, y + h - 16);
+    ctx.fillText(`${format(Math.round(distance))} LY`, x, y + h - 16);
+    /* border */
+    ctx.strokeStyle = "#c50";
+    x = (drago ? -px : 0) - ox;
+    y = (drago ? -py : 0) - oy;
+    squircle(ctx, x + 1, y + 1, w - 2, h - 2, 6);
+    ctx.stroke();
   };
 
   run = (id) => {
@@ -692,14 +714,11 @@ class Starfield {
       _r(_i(`list${i}`));
     }
     let btn = _i(`step${this.step}_btn`);
-    if (btn) {
-      btn.disabled = false;
-    }
+    if (btn) btn.disabled = false;
     this.step = parseInt(id || 0);
+    this.fn = window[`step${this.step}_draw`] || undefined;
     btn = _i(`step${this.step}_btn`);
-    if (!btn) {
-      return;
-    }
+    if (!btn) return;
     btn.disabled = true;
     const variables = _i("variables");
     let n = 0;
@@ -765,8 +784,8 @@ class Starfield {
     const r = 64;
     const g = 80;
     const b = 128;
-    const c1 = `rgb(${r},${g},${b})`;
-    const c2 = `rgb(${r + p * 64},${g - p * 32},${b - p * 64})`;
+    const c1 = `rgb(${r} ${g} ${b})`;
+    const c2 = `rgb(${r + p * 64} ${g - p * 32} ${b - p * 64})`;
     range.style.backgroundImage = `linear-gradient(90deg,${c1} 0%,${c2} ${p * 100}%,#444 ${p * 100}%)`;
   };
 
@@ -784,11 +803,13 @@ class Starfield {
         }
       }
     });
+    this.distance = this.DISTANCE;
     this.depth = this._fp - this._np;
   };
 
   code2text = () => {
-    let text = String(_i(`step${this.step}`).textContent);
+    const step = _i(`step${this.step}`);
+    let text = step ? String(step.textContent) : "\n  draw = () => {\n    // ERROR! // NREM\n  };\n";
     text = text.replaceAll(`step${this.step}_`, "");
     text = text.replace("tick", "requestAnimationFrame");
     text = text.replaceAll("lcg", "Math.random");

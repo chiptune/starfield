@@ -99,7 +99,7 @@
   step1_init = () => {
     "use strict"; // REM
     const { stars, vx, vy, _nb, _w } = sfo; // REM
-    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    window.seed = 1 + Math.sqrt(5); // REM
     for (let i = 0; i < _nb; i++) {
       stars[i] = new Float32Array(2);
       stars[i][0] = vx + (lcg() - 0.5) * _w;
@@ -143,7 +143,7 @@
     const { stars, vx, vy, _nb, _w, _fp, _np } = sfo; // REM
     let { depth } = sfo; // REM
     depth = _fp - _np;
-    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    window.seed = 1 + Math.sqrt(5); // REM
     for (let i = 0; i < _nb; i++) {
       stars[i] = new Float32Array(3);
       stars[i][0] = vx + (lcg() - 0.5) * _w;
@@ -224,7 +224,7 @@
       r = _f / z;
       z -= _np;
       c = (1 - Math.pow(z / depth, _cl)) * 255.999;
-      ctx.fillStyle = `rgb(${c},${c},${c})`;
+      ctx.fillStyle = `rgb(${c} ${c} ${c})`;
       ctx.beginPath();
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
@@ -255,7 +255,7 @@
       r = _f / z;
       z -= _np;
       c = (1 - Math.pow(z / depth, _cl)) * 255.999;
-      ctx.fillStyle = `rgb(${c},${c},${c})`;
+      ctx.fillStyle = `rgb(${c} ${c} ${c})`;
       ctx.beginPath();
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
@@ -288,7 +288,7 @@
     sfo.translate(); // REM
     x = ox + (drago ? px : 0); // REM
     y = oy + (drago ? py : 0); // REM
-    ctx.fillStyle = `rgba(0,0,0,${_o})`;
+    ctx.fillStyle = `rgb(0 0 0 / ${_o})`;
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     for (let i = 0; i < _nb; i++) {
@@ -296,7 +296,7 @@
       r = _f / z;
       z -= _np;
       c = (1 - Math.pow(z / depth, _cl)) * 255.999;
-      ctx.fillStyle = `rgb(${c},${c},${c})`;
+      ctx.fillStyle = `rgb(${c} ${c} ${c})`;
       ctx.beginPath();
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
@@ -306,16 +306,16 @@
     sfo.delta = sfo.time;
     sfo.time = performance.now();
     sfo.update_distance(); // REM
-    //distance += (time - delta) / 1000 * _m; // NREM
+    //distance += (time - delta) / 1000 * _mo; // NREM
     sfo.tick(step6_draw);
   };
 
   get_position = (star) => {
     "use strict"; // REM
-    const { distance, depth, _np, _fp } = sfo; // REM
+    const { distance, depth, _np, _fp, drag } = sfo; // REM
     let [x, y, z] = star;
-    if (sfo.drag) x += sfo.px; // REM
-    if (sfo.drag) y += sfo.py; // REM
+    if (drag) x += sfo.px; // REM
+    if (drag) y += sfo.py; // REM
     z -= distance % depth;
     if (z < _np) {
       z += depth;
@@ -330,12 +330,12 @@
   step7_draw = () => {
     "use strict"; // REM
     const { ctx, stars, depth, ox, oy, px, py, w, h, drago } = sfo; // REM
-    const { _nb, _s, _f, _np, _cl, _o, _g, _h } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl, _o, _g, _hl } = sfo; // REM
     let x, y, z, r, d, a, rad1, rad2, g; // REM
     sfo.translate(); // REM
     x = ox + (drago ? px : 0); // REM
     y = oy + (drago ? py : 0); // REM
-    ctx.fillStyle = `rgba(0,0,0,${_o})`;
+    ctx.fillStyle = `rgb(0 0 0 / ${_o})`;
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     let i = _nb;
@@ -351,10 +351,10 @@
       rad1 = (_s / _g) * 0.95;
       rad2 = (_s / _g) * 1.05;
       g = ctx.createRadialGradient(x, y, 0, x, y, d);
-      g.addColorStop(0, `hsl(0 0% 100% / ${a})`);
-      g.addColorStop(rad1, `hsl(0 0% 100% / ${a})`);
-      g.addColorStop(rad2, `hsl(0 0% 100% / ${a * _h * _o})`);
-      g.addColorStop(1, "hsl(0 0% 100% / 0)");
+      g.addColorStop(0, `hsl(0 0 100 / ${a})`);
+      g.addColorStop(rad1, `hsl(0 0 100 / ${a})`);
+      g.addColorStop(rad2, `hsl(0 0 100 / ${a * _hl * _o})`);
+      g.addColorStop(1, "hsl(0 0 100 / 0)");
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
@@ -363,7 +363,7 @@
     sfo.delta = sfo.time;
     sfo.time = performance.now();
     sfo.update_distance(); // REM
-    //distance += (time - delta) / 1000 * _m; // NREM
+    //distance += (time - delta) / 1000 * _mo; // NREM
     sfo.tick(step7_draw);
   };
 </script>
@@ -372,12 +372,12 @@
   step8_draw = () => {
     "use strict"; // REM
     const { ctx, stars, depth, ox, oy, px, py, w, h, drago } = sfo; // REM
-    const { _nb, _s, _f, _np, _cl, _o, _g, _h, _dof } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl, _o, _g, _hl, _dof } = sfo; // REM
     let x, y, z, r, d, dof, a, rad1, rad2, g; // REM
     sfo.translate(); // REM
     x = ox + (drago ? px : 0); // REM
     y = oy + (drago ? py : 0); // REM
-    ctx.fillStyle = `rgba(0,0,0,${_o})`;
+    ctx.fillStyle = `rgb(0 0 0 / ${_o})`;
     ctx.fillRect(-x, -y, w, h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     let i = _nb;
@@ -389,15 +389,15 @@
       x *= r;
       y *= r;
       z -= _np;
-      dof = Math.min(1, z / (depth * _dof));
+      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
       a = (1 - Math.pow(z / depth, _cl)) * dof;
       rad1 = Math.max((_s / _g) * 0.95 * dof, 0);
       rad2 = Math.min((_s / _g) * 1.05 * (2 - dof), 1);
       g = ctx.createRadialGradient(x, y, 0, x, y, d);
-      g.addColorStop(0, `hsl(0 0% 100% / ${a})`);
-      g.addColorStop(rad1, `hsl(0 0% 100% / ${a})`);
-      g.addColorStop(rad2, `hsl(0 0% 100% / ${a * _h * _o})`);
-      g.addColorStop(1, "hsl(0 0% 100% / 0)");
+      g.addColorStop(0, `hsl(0 0 100 / ${a})`);
+      g.addColorStop(rad1, `hsl(0 0 100 / ${a})`);
+      g.addColorStop(rad2, `hsl(0 0 100 / ${a * _hl * _o})`);
+      g.addColorStop(1, "hsl(0 0 100 / 0)");
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
@@ -406,7 +406,7 @@
     sfo.delta = sfo.time;
     sfo.time = performance.now();
     sfo.update_distance(); // REM
-    //distance += (time - delta) / 1000 * _m; // NREM
+    //distance += (time - delta) / 1000 * _mo; // NREM
     sfo.tick(step8_draw);
   };
 </script>
@@ -415,7 +415,7 @@
   step9_draw = () => {
     "use strict"; // REM
     const { ctx, stars, depth } = sfo; // REM
-    const { _nb, _s, _f, _np, _cl, _o, _g, _h, _dof } = sfo; // REM
+    const { _nb, _s, _f, _np, _cl, _o, _g, _hl, _dof } = sfo; // REM
     let x, y, z, r, d, dof, l, rad1, rad2, g; // REM
     step9_clear();
     let i = _nb;
@@ -427,15 +427,15 @@
       x *= r;
       y *= r;
       z -= _np;
-      dof = Math.min(1, z / (depth * _dof));
+      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
       l = (1 - Math.pow(z / depth, _cl)) * 100 * dof;
       rad1 = Math.max((_s / _g) * 0.95 * dof, 0);
       rad2 = Math.min((_s / _g) * 1.05 * (2 - dof), 1);
       g = ctx.createRadialGradient(x, y, 0, x, y, d);
-      g.addColorStop(0, `hsl(0 0% ${l}%)`);
-      g.addColorStop(rad1, `hsl(0 0% ${l}%)`);
-      g.addColorStop(rad2, `hsl(0 0% ${l * _h * _o}%)`);
-      g.addColorStop(1, "hsl(0 0% 0%)");
+      g.addColorStop(0, `hsl(0 0 ${l})`);
+      g.addColorStop(rad1, `hsl(0 0 ${l})`);
+      g.addColorStop(rad2, `hsl(0 0 ${l * _hl * _o})`);
+      g.addColorStop(1, "hsl(0 0 0)");
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
@@ -444,7 +444,7 @@
     sfo.delta = sfo.time;
     sfo.time = performance.now();
     sfo.update_distance(); // REM
-    //distance += (time - delta) / 1000 * _m; // NREM
+    //distance += (time - delta) / 1000 * _mo; // NREM
     sfo.tick(step9_draw);
   };
 
@@ -456,7 +456,7 @@
     const y = sfo.oy + (sfo.drago ? sfo.py : 0); // REM
     sfo.ctx.translate(x, y); // REM
     sfo.ctx.globalCompositeOperation = "source-over";
-    sfo.ctx.fillStyle = `rgba(0,0,0,${sfo._o})`;
+    sfo.ctx.fillStyle = `rgb(0 0 0 / ${sfo._o})`;
     sfo.ctx.fillRect(-x, -y, sfo.w, sfo.h); // REM
     //ctx.fillRect(-w / 2, -h / 2, w, h); // NREM
     sfo.ctx.globalCompositeOperation = "lighter";
@@ -468,7 +468,7 @@
     "use strict"; // REM
     const { vx, vy, stars, depth, _w, _nb, _np } = sfo; // REM
     let x, y, k, a, r; // REM
-    window.seed = (1 + Math.sqrt(5)) / 2; // REM
+    window.seed = 1 + Math.sqrt(5); // REM
     for (let i = 0; i < _nb; i++) {
       x = lcg() - 0.5;
       y = lcg() - 0.5;
@@ -484,7 +484,7 @@
   step10_draw = () => {
     "use strict"; // REM
     const { ctx, stars, depth, distance } = sfo; // REM
-    const { _nb, _s, _f, _np, _cs, _cl, _cy, _o, _g, _h, _dof } = sfo; // REM
+    const { _nb, _s, _f, _np, _cs, _cl, _cy, _o, _g, _hl, _dof } = sfo; // REM
     let x, y, z, r, d, u, s, dof, l, rad1, rad2, g; // REM
     clear();
     let i = _nb;
@@ -498,15 +498,15 @@
       z -= _np;
       u = stars[i][3] + (_cy / depth) * (z + distance);
       s = stars[i][4] * _cs;
-      dof = Math.min(1, z / (depth * _dof));
+      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
       l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
       rad1 = Math.max((_s / _g) * dof * 0.95, 0);
       rad2 = Math.min((_s / _g) * (2.05 - dof), 1);
       g = ctx.createRadialGradient(x, y, 0, x, y, d);
-      g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
-      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-      g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
-      g.addColorStop(1, `hsl(${u} 0% 0%)`);
+      g.addColorStop(0, `hsl(${u} ${s} ${l / _o})`);
+      g.addColorStop(rad1, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(rad2, `hsl(${u} ${s} ${l * _hl})`);
+      g.addColorStop(1, `hsl(${u} 0 0)`);
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
@@ -515,7 +515,7 @@
     sfo.delta = sfo.time;
     sfo.time = performance.now();
     sfo.update_distance(); // REM
-    //distance += (time - delta) / 1000 * _m; // NREM
+    //distance += (time - delta) / 1000 * _mo; // NREM
     sfo.tick(step10_draw);
   };
 
@@ -529,7 +529,7 @@
     const y = oy + (drago ? py : 0); // REM
     ctx.translate(x, y); // REM
     ctx.globalCompositeOperation = "source-over";
-    ctx.fillStyle = `hsl(${(_cy / depth) * distance} ${_cs * 100}%  5% / ${_o})`;
+    ctx.fillStyle = `hsl(${(_cy / depth) * distance} ${_cs * 100} 5 / ${_o})`;
     ctx.fillRect(-x, -y, w, h);
     ctx.globalCompositeOperation = "lighter";
   };
@@ -539,7 +539,7 @@
   step11_draw = () => {
     "use strict"; // REM
     const { ctx, stars, depth, distance } = sfo; // REM
-    const { _nb, _s, _f, _np, _cs, _cy, _cl, _o, _g, _h, _dof, _k } = sfo; // REM
+    const { _nb, _s, _f, _np, _cs, _cy, _cl, _o, _g, _hl, _dof } = sfo; // REM
     let x, y, z, r, d, u, s, dof, l, rad1, rad2, g, k, sw, st, sr; // REM
     clear();
     let i = _nb;
@@ -553,31 +553,31 @@
       z -= _np;
       u = stars[i][3] + (_cy / depth) * (z + distance);
       s = stars[i][4] * _cs;
-      dof = Math.min(1, z / (depth * _dof));
+      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
       l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
       rad1 = Math.max((_s / _g) * dof * 0.95, 0);
       rad2 = Math.min((_s / _g) * (2.05 - dof), 1);
       g = ctx.createRadialGradient(x, y, 0, x, y, d);
-      g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
-      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-      g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
-      g.addColorStop(1, `hsl(${u} 0% 0%)`);
+      g.addColorStop(0, `hsl(${u} ${s} ${l / _o})`);
+      g.addColorStop(rad1, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(rad2, `hsl(${u} ${s} ${l * _hl})`);
+      g.addColorStop(1, `hsl(${u} 0 0)`);
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
       g = null; // REM
       if (s > 0) continue;
-      k = _k * r;
-      rad1 = Math.max((_s / _k) * dof * 0.95, 0);
-      rad2 = Math.min((_s / _k) * (2.05 - dof), 1);
+      k = 5 * r;
+      rad1 = Math.max((_s / 6) * dof * 0.95, 0);
+      rad2 = Math.min((_s / 6) * (2.05 - dof), 1);
       g = ctx.createRadialGradient(x, y, 0, x, y, k);
       g.addColorStop(0, "#000");
-      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-      g.addColorStop(rad2, `hsl(${u} ${s}% ${l}%)`);
-      g.addColorStop(0.3, `hsl(${u + 30} ${s}% ${l / 3}%)`);
-      g.addColorStop(1, `hsl(${u + 90} ${s}% 0%)`);
+      g.addColorStop(rad1, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(rad2, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(0.3, `hsl(${u + 30} ${s} ${l / 3})`);
+      g.addColorStop(1, `hsl(${u + 90} ${s} 0)`);
       ctx.fillStyle = g;
-      sw = _s * r * 1.8;
-      st = sw / 6;
+      sw = _s * r * 2;
+      st = sw / 5;
       sr = sw - st;
       ctx.beginPath();
       ctx.arc(x - sw, y - sw, sr, CIRCLE / 4, 0, true);
@@ -600,7 +600,7 @@
     sfo.delta = sfo.time;
     sfo.time = performance.now();
     sfo.update_distance(); // REM
-    //distance += (time - delta) / 1000 * _m; // NREM
+    //distance += (time - delta) / 1000 * _mo; // NREM
     sfo.tick(step11_draw);
   };
 </script>
@@ -608,9 +608,9 @@
 <script type="application/javascript" id="step12">
   step12_draw = () => {
     "use strict"; // REM
-    const { ctx, stars, depth, distance } = sfo; // REM
-    const { _nb, _s, _f, _np, _cs, _cy, _cl, _o, _g, _h, _dof, _t1, _t2 } = sfo; // REM
-    let x, y, z, r, d, u, s, dof, l, rad1, rad2, g, k, sw, st, sr; // REM
+    const { ctx, stars, depth, distance, ox, oy, px, py, w, h } = sfo; // REM
+    const { _nb, _s, _f, _np, _cs, _cy, _cl, _o, _g, _hl, _dof, _mi } = sfo; // REM
+    let x, y, z, r, d, u, s, dof, l, rad1, rad2, g, k; // REM
     clear();
     let i = _nb;
     while (i) {
@@ -620,27 +620,138 @@
       d = _g * r;
       x *= r;
       y *= r;
+      if (y > -d) continue;
       z -= _np;
       u = stars[i][3] + (_cy / depth) * (z + distance);
       s = stars[i][4] * _cs;
-      dof = Math.min(1, z / (depth * _dof));
+      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
       l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
       rad1 = Math.max((_s / _g) * dof * 0.95, 0);
       rad2 = Math.min((_s / _g) * (2.05 - dof), 1);
       g = ctx.createRadialGradient(x, y, 0, x, y, d);
-      g.addColorStop(0, `hsl(${u} ${s}% ${l / _o}%)`);
-      g.addColorStop(rad1, `hsl(${u} ${s}% ${l}%)`);
-      g.addColorStop(rad2, `hsl(${u} ${s}% ${l * _h}%)`);
-      g.addColorStop(1, `hsl(${u} 0% 0%)`);
+      g.addColorStop(0, `hsl(${u} ${s} ${l / _o})`);
+      g.addColorStop(rad1, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(rad2, `hsl(${u} ${s} ${l * _hl})`);
+      g.addColorStop(1, `hsl(${u} 0 0)`);
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
+      g = undefined; // REM
+      u -= 90 * _mi;
+      s *= _mi / 4;
+      l *= _mi / 2;
+      g = ctx.createRadialGradient(x, -y, 0, x, -y, d);
+      g.addColorStop(0, `hsl(${u} ${s} ${l / _o})`);
+      g.addColorStop(rad1, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(rad2, `hsl(${u} ${s} ${l * _hl})`);
+      g.addColorStop(1, `hsl(${u} 0 0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, -y - d, d * 2, d * 2);
+      g = undefined; // REM
     }
     sfo.overlay_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
     sfo.update_distance(); // REM
-    //distance += (time - delta) / 1000 * _m; // NREM
+    //distance += (time - delta) / 1000 * _mo; // NREM
     sfo.tick(step12_draw);
+  };
+</script>
+
+<script type="application/javascript" id="step13">
+  step13_draw = () => {
+    "use strict"; // REM
+    const { ctx, stars, depth, distance, ox, oy, px, py, w, h, drag, drago } = sfo; // REM
+    const { _nb, _w, _s, _f, _np, _cs, _cy, _cl, _o, _g, _hl, _dof, _mi, _ho } = sfo; // REM
+    let x, y, z, r, d, u, s, dof, l, rad1, rad2, g, k, ho; // REM
+    step13_clear();
+    let i = _nb;
+    while (i) {
+      i--;
+      [x, y, z] = get_position(stars[i]);
+      r = _f / z;
+      d = _g * r;
+      x *= r;
+      y *= r;
+      if (y > -d) continue;
+      z -= _np;
+      u = stars[i][3] + (_cy / depth) * (z + distance);
+      s = stars[i][4] * _cs;
+      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
+      l = (1 - Math.pow(z / depth, _cl)) * 100 * dof * _o;
+      rad1 = Math.max((_s / _g) * dof * 0.95, 0);
+      rad2 = Math.min((_s / _g) * (2.05 - dof), 1);
+      g = ctx.createRadialGradient(x, y, 0, x, y, d);
+      g.addColorStop(0, `hsl(${u} ${s} ${l / _o})`);
+      g.addColorStop(rad1, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(rad2, `hsl(${u} ${s} ${l * _hl})`);
+      g.addColorStop(1, `hsl(${u} 0 0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, y - d, d * 2, d * 2);
+      g = undefined; // REM
+      u -= 90 * _mi;
+      s *= _mi / 4;
+      l *= _mi / 2;
+      g = ctx.createRadialGradient(x, -y, 0, x, -y, d);
+      g.addColorStop(0, `hsl(${u} ${s} ${l / _o})`);
+      g.addColorStop(rad1, `hsl(${u} ${s} ${l})`);
+      g.addColorStop(rad2, `hsl(${u} ${s} ${l * _hl})`);
+      g.addColorStop(1, `hsl(${u} 0 0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(x - d, -y - d, d * 2, d * 2);
+      g = undefined; // REM
+    }
+    x = ox;
+    if (drago) x += px; // REM
+    y = sfo.vy + _w / 8;
+    if (drag) y += py; // REM
+    i = _ho;
+    d = depth * 4;
+    while (i) {
+      z = (d / _ho) * i - (distance % (d / _ho));
+      r = _f / z;
+      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
+      l = (1 - Math.sqrt(z / d, _cl)) * 100 * dof;
+      u = (_cy / depth) * distance + (90 / d) * z;
+      ctx.beginPath();
+      ctx.moveTo(-x, y * r);
+      ctx.lineTo(w - x, y * r);
+      ctx.strokeStyle = `hsl(${u} ${_cs * 100} ${l} / ${_o})`;
+      ctx.lineWidth = (1 / z) * _f;
+      ctx.stroke();
+      i--;
+    }
+    sfo.overlay_draw(); // REM
+    sfo.debug_draw(); // REM
+    sfo.delta = sfo.time;
+    sfo.time = performance.now();
+    sfo.update_distance(); // REM
+    //distance += (time - delta) / 1000 * _mo; // NREM
+    sfo.tick(step13_draw);
+  };
+
+  step13_clear = () => {
+    "use strict"; // REM
+    const { ctx, dpr, depth, distance, _cs, _cy, _o, _mi } = sfo; // REM
+    const { ox, oy, px, py, w, h, drago } = sfo; // REM
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // REM
+    ctx.scale(dpr, dpr); // REM
+    const x = ox + (drago ? px : 0); // REM
+    const y = oy + (drago ? py : 0); // REM
+    ctx.translate(x, y); // REM
+    ctx.globalCompositeOperation = "source-over";
+    const u = (_cy / depth) * distance;
+    const s = _cs * 100;
+    const g = ctx.createLinearGradient(0, -y, 0, h - y);
+    const hy = y / h;
+    g.addColorStop(0, `hsl(${u - 90} ${_cs} 5 / ${_o})`);
+    g.addColorStop(hy * 0.5, `hsl(${u - 60} ${s} 10 / ${_o})`);
+    g.addColorStop(hy * 0.96, `hsl(${u - 30} ${s} 30 / ${_o})`);
+    g.addColorStop(hy * 1.04, `hsl(${u} ${s} 5 / ${_o})`);
+    g.addColorStop(hy * 1.06, `hsl(${u + 10} ${s} 5 / ${_o})`);
+    g.addColorStop(1, `hsl(${u + 60} ${s} 20 / ${_o})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(-x, -y, w, h);
+    ctx.globalCompositeOperation = "lighter";
   };
 </script>
