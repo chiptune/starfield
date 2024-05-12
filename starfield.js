@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = [0, 1, 3];
+const VERSION = [0, 2, 0];
 
 /* DOM manipulation shortcuts */
 const _i = (id) => document.getElementById(String(id));
@@ -82,20 +82,20 @@ class Starfield {
     ["_ho", "horizon", 0, 32, 1, 16],
   ];
   steps = [
-    ["intro", null, [6, 11, 19], [3]],
+    ["intro", null, [6, 11, 22], [3]],
     ["points", [0, 1, 2], [3, 4, 15], [20]],
     ["depth", [3, 4], [6, 17], [1]],
     ["focale", [5], [6, 8]],
     ["light", [6], [7, 8], [16]],
-    ["sorting", null, [[15, 23]], [4]],
+    ["sorting", null, [[15, 22]], [4]],
     ["motion", [7, 8], [1, [13, 16], [19, 28]], [4]],
-    ["gradient", [9, 10], [[12, 20]]],
+    ["gradient", [9, 10], [[12, 21]]],
     ["dof", [11], [[12, 15]]],
-    ["blending", null, [1, [29, 34]]],
+    ["blending", null, [[29, 34]], [1]],
     ["color", [12, 13], [8, 9, 24, 25, [31, 34], 46]],
     ["spikes", null, [[24, 51]]],
     ["mirror", [14], [[25, 34]], [10]],
-    ["horizon", [15], [], []],
+    ["horizon", [15], [[60, 75]], []],
   ];
   px = 0;
   py = 0;
@@ -124,9 +124,12 @@ class Starfield {
     this.distance = Number(this.url.get("distance")) || this.DISTANCE;
     this.vx = Number(this.url.get("x")) || 0;
     this.vy = Number(this.url.get("y")) || 0;
+    this.nocode = Boolean(this.url.get("nocode"));
+    this.novars = Boolean(this.url.get("novars"));
     this.pause = Boolean(this.url.get("pause"));
-    this.overlay = Boolean(this.url.get("overlay"));
+    this.crt = Boolean(this.url.get("crt"));
     this.debug = Boolean(this.url.get("debug"));
+    this.fullscreen = Boolean(this.url.get("fullscreen"));
     /* variables */
     this.vars.forEach((v) => {
       this[v[0]] = Number(this.url.get(v[0].slice(1)) || v[5]);
@@ -151,11 +154,17 @@ class Starfield {
     this.ctx.imageSmoothingQuality = "high";
     this.ctx.lineCap = "round";
     /* events */
+    _i("nocode").addEventListener("change", () => {
+      this.set_nocode(!this.nocode);
+    });
+    _i("novars").addEventListener("change", () => {
+      this.set_novars(!this.novars);
+    });
     _i("motion").addEventListener("change", () => {
       this.set_pause(!this.pause);
     });
-    _i("overlay").addEventListener("change", () => {
-      this.set_overlay(!this.overlay);
+    _i("crt").addEventListener("change", () => {
+      this.set_crt(!this.crt);
     });
     _i("debug").addEventListener("change", () => {
       this.set_debug(!this.debug);
@@ -171,8 +180,21 @@ class Starfield {
   }
 
   resize = () => {
-    this.w = this.cvs.offsetWidth;
-    this.h = this.cvs.offsetHeight;
+    const style = getComputedStyle(document.body);
+    const padding = parseInt(style.getPropertyValue("--padding"));
+    const content = _i("content");
+    const menu = _i("menu");
+    const visual = _i("visual");
+    const code = _t("code")[0];
+    if (this.fullscreen) {
+      menu.style.display = "none";
+      this.w = content.offsetWidth;
+      this.h = content.offsetHeight;
+    } else {
+      menu.style.display = "flex";
+      this.w = visual.offsetWidth + (this.nocode ? code.offsetWidth + padding : 0);
+      this.h = content.offsetHeight - (this.novars ? 0 : _i("variables").offsetHeight);
+    }
     this.ox = this.w / 2 + Number(this.url.get("ox") || 0);
     this.oy = this.h / 2 - Number(this.url.get("oy") || 0);
     this.oz = 1e12;
@@ -184,15 +206,16 @@ class Starfield {
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(this.dpr, this.dpr);
     this.ctx.translate(this.ox, this.oy);
-    this.generate_overlay();
+    this.generate_crt();
     this.single_frame();
   };
 
   init = () => {
-    step10_init();
-    this.resize();
+    this.set_fullscreen(this.fullscreen);
+    this.set_nocode(this.nocode);
+    this.set_novars(this.novars);
     this.set_pause(this.pause);
-    this.set_overlay(this.overlay);
+    this.set_crt(this.crt);
     this.set_debug(this.debug);
     this.run(this.step);
   };
@@ -254,17 +277,6 @@ class Starfield {
       this.set_url();
     }, 250);
   }
-  set_pause = (state) => {
-    this.pause = state;
-    _i("motion").checked = !this.pause;
-    this.set_url();
-    if (this.pause) {
-      this.single_frame();
-    } else {
-      this.start();
-    }
-  };
-
   keyup = (e) => {
     this.shift = e.shiftKey;
     this.key = e.key;
@@ -277,20 +289,52 @@ class Starfield {
     this.meta = e.metaKey;
     this.key = e.key;
     switch (e.key) {
-      case "Escape":
-      case "d":
-        if (this.shift) {
-          document.body.className = document.body.className === "" ? "debug" : "";
-        } else {
-          this.set_debug(!this.debug);
-        }
+      case "c":
+        this.set_nocode(!this.nocode);
         break;
-      case "o":
-        this.set_overlay(!this.overlay);
+      case "v":
+        this.set_novars(!this.novars);
         break;
       case "Enter":
       case "p":
         this.set_pause(!this.pause);
+        break;
+      case "f":
+        this.set_fullscreen(!this.fullscreen);
+        break;
+      case "o":
+        this.set_crt(!this.crt);
+        break;
+      case "d":
+        this.set_debug(!this.debug);
+        break;
+      case "r":
+        if (this.meta) break;
+        this.reset();
+        this.set_url();
+        this.code2text();
+        step10_init();
+        this.single_frame();
+        break;
+      case "R":
+        if (this.meta) break;
+        this.ox = this.w / 2;
+        this.oy = this.h / 2;
+        this.vx = 0;
+        this.vy = 0;
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.scale(this.dpr, this.dpr);
+        this.ctx.translate(this.ox, this.oy);
+        this.set_url();
+        step10_init();
+        this.single_frame();
+        break;
+      case "Escape":
+        if (this.shift) {
+          document.body.className = document.body.className === "" ? "debug" : "";
+        } else if (this.fullscreen) {
+          this.set_fullscreen(false);
+        }
         break;
       case "ArrowUp":
         if (this.shift) {
@@ -334,32 +378,48 @@ class Starfield {
         this.distance = Math.round(this.distance - this._mo);
         this.start();
         break;
-      case "c":
-        this.ox = this.w / 2;
-        this.oy = this.h / 2;
-        this.vx = 0;
-        this.vy = 0;
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.ctx.scale(this.dpr, this.dpr);
-        this.ctx.translate(this.ox, this.oy);
-        this.set_url();
-        step10_init();
-        this.single_frame();
-        break;
-      case "r":
-        if (this.meta) break;
-        this.reset();
-        this.set_url();
-        this.code2text();
-        step10_init();
-        this.single_frame();
-        break;
     }
   };
 
-  set_overlay = (state) => {
-    this.overlay = state;
-    _i("overlay").checked = this.overlay;
+  set_nocode = (state) => {
+    this.nocode = state;
+    _i("nocode").checked = !this.nocode;
+    _t("code")[0].style.visibility = this.nocode ? "hidden" : "visible";
+    this.resize();
+    this.set_url();
+    this.single_frame();
+  };
+
+  set_novars = (state) => {
+    this.novars = state;
+    _i("novars").checked = !this.novars;
+    _i("variables").style.visibility = this.novars ? "hidden" : "visible";
+    this.resize();
+    this.set_url();
+    this.single_frame();
+  };
+
+  set_pause = (state) => {
+    this.pause = state;
+    _i("motion").checked = !this.pause;
+    this.set_url();
+    if (this.pause) {
+      this.single_frame();
+    } else {
+      this.start();
+    }
+  };
+
+  set_fullscreen = (state) => {
+    this.fullscreen = state;
+    this.resize();
+    this.set_url();
+    this.single_frame();
+  };
+
+  set_crt = (state) => {
+    this.crt = state;
+    _i("crt").checked = this.crt;
     this.set_url();
     this.single_frame();
   };
@@ -382,15 +442,18 @@ class Starfield {
       this.ox !== this.w / 2 ? "ox=" + (this.ox - this.w / 2) : null,
       this.oy !== this.h / 2 ? "oy=" + -(this.oy - this.h / 2) : null, // Y up!
       Math.round(this.distance) !== this.DISTANCE ? "distance=" + Math.round(this.distance) : null,
+      this.nocode ? "nocode=true" : null,
+      this.novars ? "novars=true" : null,
       this.pause ? "pause=true" : null,
-      this.overlay ? "overlay=true" : null,
+      this.fullscreen ? "fullscreen=true" : null,
+      this.crt ? "crt=true" : null,
       this.debug ? "debug=true" : null,
     ];
     params = params.filter((p) => p !== null);
     history.replaceState({ data: "" }, title, this.root + (params.length > 0 ? "?" : "") + params.join("&"));
   };
 
-  generate_overlay = () => {
+  generate_crt = () => {
     this.ocvs = _c("canvas");
     this.ocvs.width = this.w * this.dpr;
     this.ocvs.height = this.h * this.dpr;
@@ -407,14 +470,14 @@ class Starfield {
     const dot = 1;
     this.octx.setLineDash([0, dot * 3]);
     this.octx.lineWidth = dot * 1.2;
-    this.overlay_rgb(dot, 32, 1);
+    this.crt_rgb(dot, 32, 1);
     this.octx.lineWidth = dot * 0.8;
-    this.overlay_rgb(dot, 96, 1);
+    this.crt_rgb(dot, 96, 1);
   };
 
-  overlay_rgb = (dot, c, alpha) => {
+  crt_rgb = (dot, c, alpha) => {
     /* R */
-    this.octx.strokeStyle = `rgba(${c * 4},${c},${c},${alpha})`;
+    this.octx.strokeStyle = `rgb(${c * 4} ${c} ${c} / ${alpha})`;
     let y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -425,7 +488,7 @@ class Starfield {
       y += dot;
     }
     /* G */
-    this.octx.strokeStyle = `rgba(${c},${c * 4},${c},${alpha})`;
+    this.octx.strokeStyle = `rgb(${c} ${c * 4} ${c} / ${alpha})`;
     y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -436,7 +499,7 @@ class Starfield {
       y += dot;
     }
     /* B */
-    this.octx.strokeStyle = `rgba(${c},${c},${c * 4},${alpha})`;
+    this.octx.strokeStyle = `rgb(${c} ${c} ${c * 4} / ${alpha})`;
     y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -500,8 +563,8 @@ class Starfield {
     this.distance += ((this.time - this.delta) / 1000) * this._mo;
   };
 
-  overlay_draw = () => {
-    if (!this.overlay) return;
+  crt_draw = () => {
+    if (!this.crt) return;
     const x = -this.ox - (this.drago ? this.px : 0);
     const y = -this.oy - (this.drago ? this.py : 0);
     this.ctx.globalCompositeOperation = "overlay";
@@ -720,7 +783,6 @@ class Starfield {
     btn = _i(`step${this.step}_btn`);
     if (!btn) return;
     btn.disabled = true;
-    const variables = _i("variables");
     let n = 0;
     for (let i = 0; i <= this.step; i++) {
       const v = this.steps[i][1];
@@ -730,7 +792,7 @@ class Starfield {
         const slider = _c("form");
         slider.id = `slider${n}`;
         slider.className = "slider";
-        _a(variables, slider);
+        _a(_i("variables"), slider);
         const label = _c("label");
         label.id = `label${n}`;
         label.setAttribute("for", `range${n}`);
@@ -825,7 +887,7 @@ class Starfield {
     ["$", "#", "@", "%", "&", "|", "<", ">"].forEach((v) => {
       text = text.replaceAll(v, `«sy3»${v}¤`);
     });
-    ["if", "for", "while", "continue", "return", "new", "let", "const"].forEach((v) => {
+    ["if ", "for ", "while ", "continue", "return", "new ", "let ", "const "].forEach((v) => {
       text = text.replaceAll(v, `«sy4»${v}¤`);
     });
     ["Math", "Float32Array", "requestAnimationFrame", "rgb", "hsl"].forEach((v) => {

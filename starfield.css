@@ -14,8 +14,7 @@
   --button-padding: 5px 10px 4px 10px;
   --button-radius: 4px;
   --checkbox-size: 18px;
-  --slider-height: 17px;
-  --slider-margin: 1px;
+  --slider-height: 18px;
   --slider-label-width: 60px;
   --slider-var-width: 54px;
   --config-margin: 2px;
@@ -220,7 +219,7 @@ a::before {
   width: fit-content;
   font-size: 16px;
   line-height: 16px;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.2px;
   text-transform: uppercase;
   color: var(--color-border);
   -webkit-text-fill-color: var(--color-border);
@@ -233,9 +232,9 @@ a::before {
 }
 
 #credits {
-  white-space: nowrap;
   text-transform: uppercase;
   text-align: right;
+  text-wrap: nowrap;
   color: #579;
 }
 
@@ -249,34 +248,29 @@ a::before {
 }
 
 #content {
-  display: flex;
-  flex-direction: row;
-  flex-grow: 1;
+  display: grid;
+  grid-template-columns: min-content minmax(64px, auto) calc(var(--code-width) + var(--border) * 2);
   column-gap: var(--padding);
+  height: calc(100vh - var(--logo-size) - var(--padding) * 3);
+  overflow: hidden;
 }
 
 #visual {
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
-  min-width: 64px;
   row-gap: var(--padding);
 }
 
 #starfield {
-  display: flex;
-  flex-shrink: 1;
-  flex-grow: 1;
-  flex-basis: content;
   border-radius: var(--radius);
   cursor: crosshair;
+  z-index: 2;
 }
 
 #variables {
   display: flex;
   flex-direction: column;
-  row-gap: var(--slider-margin);
-  height: calc(var(--slider-height) * var(--var-count) + var(--slider-margin) * (var(--var-count) - 1));
+  height: calc(var(--slider-height) * var(--var-count) + var(--padding));
 }
 
 #menu {
@@ -284,6 +278,8 @@ a::before {
   flex-direction: column;
   flex-shrink: 0;
   row-gap: var(--padding);
+  height: fit-content;
+  justify-self: end;
 }
 
 #steps {
@@ -378,7 +374,7 @@ input[type="checkbox"] {
   border-width: 0;
   border-radius: var(--button-radius);
   background-color: var(--color-background-input);
-  font: normal 26px/10px "hud";
+  font: normal 24px/10px "hud";
   text-align: center;
   color: var(--color-text);
   box-shadow: 0 0 2px var(--color-text-shadow);
@@ -479,7 +475,7 @@ code > div {
   width: 4px;
   height: var(--code-line-height);
   margin-right: 8px;
-  border-right: 1px solid;
+  border-right: 1.5px solid;
   border-right-color: #357;
   flex-shrink: 0;
 }

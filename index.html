@@ -30,26 +30,34 @@
         </div>
       </div>
       <div id="content">
-        <div id="visual">
-          <canvas id="starfield"></canvas>
-          <div id="variables"></div>
-        </div>
         <div id="menu">
           <div id="steps"></div>
           <div id="config">
+            <form>
+              <label for="nocode">code</label>
+              <input type="checkbox" id="nocode" />
+            </form>
+            <form>
+              <label for="novars">vars</label>
+              <input type="checkbox" id="novars" />
+            </form>
             <form>
               <label for="motion">motion</label>
               <input type="checkbox" id="motion" />
             </form>
             <form>
-              <label for="overlay">overlay</label>
-              <input type="checkbox" id="overlay" />
+              <label for="crt">crt</label>
+              <input type="checkbox" id="crt" />
             </form>
             <form>
               <label for="debug">debug</label>
               <input type="checkbox" id="debug" />
             </form>
           </div>
+        </div>
+        <div id="visual">
+          <canvas id="starfield"></canvas>
+          <div id="variables"></div>
         </div>
         <code><div></div></code>
       </div>
@@ -71,7 +79,7 @@
     x = (drago ? 0 : px) - _w / 4; // REM
     y = (drago ? 0 : py) - _w / 4; // REM
     ctx.drawImage(cute_star, 0, 0, 128 * dpr, 128 * dpr, x, y, _w / 2, _w / 2); // REM
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time; // REM
     sfo.time = performance.now(); // REM
@@ -79,17 +87,20 @@
   };
 
   // # README #
-  // you can use the mouse to move the stars (click + drag)
+  // Use the mouse to move the stars (click + drag)
   // and the mousewheel to change the distance.
-  // shift + drag will change the world origin.
+  // Use shift + drag to move the world origin.
 
   // # SHORTCUTS #
-  // r: reset all parameters
-  // c: reset stars origin
-  // p/enter: animation play/pause
-  // o: overlay on/off
-  // d/esc: debug mode on/off
-  // up/down: cycle through steps
+  // V: show/hide variables
+  // C: show/hide code
+  // P: animation play/pause
+  // F: fullscreen on/off (Escape to exit)
+  // O: crt on/off
+  // D: debug mode on/off
+  // R: reset all parameters
+  // R + shift: reset word origin
+  // Arrow up/down: cycle through steps
 
   // # SOURCE #
   // github.com/chiptune/starfield
@@ -127,7 +138,7 @@
       //ctx.arc(x, y, _s * 2, 0, CIRCLE); // NREM
       ctx.fill();
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time; // REM
     sfo.time = performance.now(); // REM
@@ -170,7 +181,7 @@
       ctx.arc(x / z, y / z, _s * 2, 0, CIRCLE);
       ctx.fill();
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time; // REM
     sfo.time = performance.now(); // REM
@@ -198,7 +209,7 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time; // REM
     sfo.time = performance.now(); // REM
@@ -229,7 +240,7 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time; // REM
     sfo.time = performance.now(); // REM
@@ -260,7 +271,7 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time; // REM
     sfo.time = performance.now(); // REM
@@ -269,7 +280,7 @@
 
   get_index = (i) => {
     "use strict"; // REM
-    const { distance, depth, _nb } = sfo;
+    const { distance, depth, _nb } = sfo; // REM
     let d = distance % depth;
     if (d < 0) d += depth;
     let n = Math.floor((d / depth) * _nb) - i;
@@ -301,7 +312,7 @@
       ctx.arc(x * r, y * r, _s * r, 0, CIRCLE);
       ctx.fill();
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -358,7 +369,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -401,7 +412,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -439,7 +450,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -510,7 +521,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -595,7 +606,7 @@
       ctx.fill();
       g = null; // REM
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -648,7 +659,7 @@
       ctx.fillRect(x - d, -y - d, d * 2, d * 2);
       g = undefined; // REM
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -711,7 +722,7 @@
       z = (d / _ho) * i - (distance % (d / _ho));
       r = _f / z;
       dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
-      l = (1 - Math.sqrt(z / d, _cl)) * 100 * dof;
+      l = (1 - Math.sqrt(z / d, _cl)) * 70 * dof;
       u = (_cy / depth) * distance + (90 / d) * z;
       ctx.beginPath();
       ctx.moveTo(-x, y * r);
@@ -721,7 +732,7 @@
       ctx.stroke();
       i--;
     }
-    sfo.overlay_draw(); // REM
+    sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
     sfo.delta = sfo.time;
     sfo.time = performance.now();
@@ -742,16 +753,17 @@
     ctx.globalCompositeOperation = "source-over";
     const u = (_cy / depth) * distance;
     const s = _cs * 100;
-    const g = ctx.createLinearGradient(0, -y, 0, h - y);
+    let g = ctx.createLinearGradient(0, -y, 0, h - y);
     const hy = y / h;
     g.addColorStop(0, `hsl(${u - 90} ${_cs} 5 / ${_o})`);
-    g.addColorStop(hy * 0.5, `hsl(${u - 60} ${s} 10 / ${_o})`);
-    g.addColorStop(hy * 0.96, `hsl(${u - 30} ${s} 30 / ${_o})`);
-    g.addColorStop(hy * 1.04, `hsl(${u} ${s} 5 / ${_o})`);
-    g.addColorStop(hy * 1.06, `hsl(${u + 10} ${s} 5 / ${_o})`);
+    g.addColorStop(hy * 0.4, `hsl(${u - 60} ${s} 10 / ${_o})`);
+    g.addColorStop(hy * 0.98, `hsl(${u - 30} ${s} 30 / ${_o})`);
+    g.addColorStop(hy * 1.02, `hsl(${u} ${s} 5 / ${_o})`);
+    g.addColorStop(hy * 1.08, `hsl(${u} ${s} 5 / ${_o})`);
     g.addColorStop(1, `hsl(${u + 60} ${s} 20 / ${_o})`);
     ctx.fillStyle = g;
     ctx.fillRect(-x, -y, w, h);
+    g = undefined; // REM
     ctx.globalCompositeOperation = "lighter";
   };
 </script>
