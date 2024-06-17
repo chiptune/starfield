@@ -32,6 +32,10 @@
       <div id="content">
         <div id="menu">
           <div id="steps"></div>
+          <div id="options">
+            <button onclick="reset()">reset</button>
+            <button onclick="randomize()">random</button>
+          </div>
           <div id="config">
             <form>
               <label for="nocode">code</label>
@@ -98,8 +102,9 @@
   // F: fullscreen on/off (Escape to exit)
   // O: crt on/off
   // D: debug mode on/off
-  // R: reset all parameters
-  // R + shift: reset word origin
+  // R: randomize star positions
+  // X: reset all parameters
+  // X + shift: reset word origin
   // Arrow up/down: cycle through steps
 
   // # SOURCE #
@@ -110,7 +115,6 @@
   step1_init = () => {
     "use strict"; // REM
     const { stars, vx, vy, _nb, _w } = sfo; // REM
-    window.seed = 1 + Math.sqrt(5); // REM
     for (let i = 0; i < _nb; i++) {
       stars[i] = new Float32Array(2);
       stars[i][0] = vx + (lcg() - 0.5) * _w;
@@ -154,7 +158,6 @@
     const { stars, vx, vy, _nb, _w, _fp, _np } = sfo; // REM
     let { depth } = sfo; // REM
     depth = _fp - _np;
-    window.seed = 1 + Math.sqrt(5); // REM
     for (let i = 0; i < _nb; i++) {
       stars[i] = new Float32Array(3);
       stars[i][0] = vx + (lcg() - 0.5) * _w;
@@ -479,7 +482,6 @@
     "use strict"; // REM
     const { vx, vy, stars, depth, _w, _nb, _np } = sfo; // REM
     let x, y, k, a, r; // REM
-    window.seed = 1 + Math.sqrt(5); // REM
     for (let i = 0; i < _nb; i++) {
       x = lcg() - 0.5;
       y = lcg() - 0.5;
@@ -647,7 +649,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
       g = undefined; // REM
-      u -= 90 * _mi;
+      u += 120 * _mi;
       s *= _mi / 4;
       l *= _mi / 2;
       g = ctx.createRadialGradient(x, -y, 0, x, -y, d);
@@ -700,7 +702,7 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, y - d, d * 2, d * 2);
       g = undefined; // REM
-      u -= 90 * _mi;
+      u += 120 * _mi;
       s *= _mi / 4;
       l *= _mi / 2;
       g = ctx.createRadialGradient(x, -y, 0, x, -y, d);
@@ -711,26 +713,6 @@
       ctx.fillStyle = g;
       ctx.fillRect(x - d, -y - d, d * 2, d * 2);
       g = undefined; // REM
-    }
-    x = ox;
-    if (drago) x += px; // REM
-    y = sfo.vy + _w / 8;
-    if (drag) y += py; // REM
-    i = _ho;
-    d = depth * 4;
-    while (i) {
-      z = (d / _ho) * i - (distance % (d / _ho));
-      r = _f / z;
-      dof = Math.min(1, Math.pow(z / (depth * _dof), _cl));
-      l = (1 - Math.sqrt(z / d, _cl)) * 70 * dof;
-      u = (_cy / depth) * distance + (90 / d) * z;
-      ctx.beginPath();
-      ctx.moveTo(-x, y * r);
-      ctx.lineTo(w - x, y * r);
-      ctx.strokeStyle = `hsl(${u} ${_cs * 100} ${l} / ${_o})`;
-      ctx.lineWidth = (1 / z) * _f;
-      ctx.stroke();
-      i--;
     }
     sfo.crt_draw(); // REM
     sfo.debug_draw(); // REM
@@ -760,10 +742,16 @@
     g.addColorStop(hy * 0.98, `hsl(${u - 30} ${s} 30 / ${_o})`);
     g.addColorStop(hy * 1.02, `hsl(${u} ${s} 5 / ${_o})`);
     g.addColorStop(hy * 1.08, `hsl(${u} ${s} 5 / ${_o})`);
-    g.addColorStop(1, `hsl(${u + 60} ${s} 20 / ${_o})`);
+    g.addColorStop(1, `hsl(${u + 30} ${s} 20 / ${_o})`);
     ctx.fillStyle = g;
     ctx.fillRect(-x, -y, w, h);
     g = undefined; // REM
     ctx.globalCompositeOperation = "lighter";
   };
 </script>
+
+/* x = ox; if (drago) x += px; // REM y = sfo.vy + _w / 8; if (drag) y += py; // REM i = _ho; d = depth * 4; while (i) {
+z = (d / _ho) * i - (distance % (d / _ho)); r = _f / z; dof = Math.min(1, Math.pow(z / (depth * _dof), _cl)); l = (1 -
+Math.sqrt(z / d, _cl)) * 70 * dof; u = (_cy / depth) * distance + (90 / d) * z; ctx.beginPath(); ctx.moveTo(-x, y * r);
+ctx.lineTo(w - x, y * r); ctx.strokeStyle = `hsl(${u} ${_cs * 100} ${l} / ${_o})`; ctx.lineWidth = (0.5 / z) * _f;
+ctx.stroke(); i--; } */

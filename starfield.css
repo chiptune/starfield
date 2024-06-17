@@ -2,7 +2,7 @@
   user-select: none;
   color-scheme: only dark;
   /* constants */
-  --var-count: 16;
+  --var-count: 15;
   /* global variables */
   --font-size: 14px;
   --margin: 4px;
@@ -16,29 +16,33 @@
   --checkbox-size: 18px;
   --slider-height: 18px;
   --slider-label-width: 60px;
-  --slider-var-width: 54px;
+  --slider-var-width: 56px;
   --config-margin: 2px;
   --var-radius: 4px;
   --code-width: 432px;
   --code-line-height: 18px;
   --logo-size: 42px;
   --delay: 0.5s;
+  /* calculated variables */
+  --content-height: calc(100vh - var(--logo-size) - var(--padding) * 3);
   /* colors */
-  --var-sat: 70%;
+  --color-var: 0.666 0.2;
+  --color-rainbow: 0.8 0.333;
   --color-background: #222;
   --color-background-alt: #333;
   --color-background-input: #777;
   --color-border: #777;
+  --color-border-alt: #555;
   --color-text: #fff;
   --color-text-shadow: #000c;
-  --color-rainbow-1: hsl(135 90 50);
-  --color-rainbow-2: hsl(90 90 50);
-  --color-rainbow-3: hsl(45 90 50);
-  --color-rainbow-4: hsl(0 90 50);
-  --color-rainbow-5: hsl(-45 90 60);
-  --color-rainbow-6: hsl(-90 90 60);
-  --color-rainbow-7: hsl(-135 90 60);
-  --color-rainbow-8: hsl(-180 90 40);
+  --color-rainbow-1: oklch(var(--color-rainbow) 135);
+  --color-rainbow-2: oklch(var(--color-rainbow) 90);
+  --color-rainbow-3: oklch(var(--color-rainbow) 45);
+  --color-rainbow-4: oklch(var(--color-rainbow) 0);
+  --color-rainbow-5: oklch(var(--color-rainbow) -45);
+  --color-rainbow-6: oklch(var(--color-rainbow) -90);
+  --color-rainbow-7: oklch(var(--color-rainbow) -135);
+  --color-rainbow-8: oklch(var(--color-rainbow) -180);
 }
 
 @font-face {
@@ -251,48 +255,23 @@ a::before {
   display: grid;
   grid-template-columns: min-content minmax(64px, auto) calc(var(--code-width) + var(--border) * 2);
   column-gap: var(--padding);
-  height: calc(100vh - var(--logo-size) - var(--padding) * 3);
+  height: var(--content-height);
   overflow: hidden;
-}
-
-#visual {
-  display: flex;
-  flex-direction: column;
-  row-gap: var(--padding);
-}
-
-#starfield {
-  border-radius: var(--radius);
-  cursor: crosshair;
-  z-index: 2;
-}
-
-#variables {
-  display: flex;
-  flex-direction: column;
-  height: calc(var(--slider-height) * var(--var-count) + var(--padding));
 }
 
 #menu {
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
   row-gap: var(--padding);
-  height: fit-content;
-  justify-self: end;
+  height: var(--content-height);
 }
 
-#steps {
-  display: flex;
-  flex-direction: column;
-  row-gap: var(--margin);
-}
-
+#options,
 #config {
   display: flex;
   flex-direction: column;
   row-gap: var(--config-margin);
-  border: var(--border) solid var(--color-border);
+  border: var(--border) solid var(--color-border-alt);
   border-radius: calc(var(--button-radius) + var(--padding));
   padding: var(--padding);
   background-color: var(--color-background);
@@ -310,6 +289,39 @@ a::before {
   flex-shrink: 0;
 }
 
+#options {
+  row-gap: var(--margin);
+}
+
+#visual {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--padding);
+  width: fit-content;
+}
+
+#starfield {
+  border-radius: var(--radius);
+  cursor: crosshair;
+  z-index: 2;
+}
+
+#variables {
+  display: flex;
+  flex-direction: column;
+  height: calc(var(--slider-height) * var(--var-count) + var(--padding));
+  align-self: center;
+  min-width: 50%;
+  max-width: 50%;
+}
+
+#steps {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--margin);
+  flex-grow: 1;
+}
+
 .slider {
   height: var(--slider-height);
 }
@@ -322,7 +334,7 @@ a::before {
   width: calc(100% - var(--slider-label-width) - var(--slider-var-width));
 }
 
-input[type="button"] {
+button {
   appearance: none;
   outline: none;
   padding: var(--button-padding);
@@ -340,15 +352,19 @@ input[type="button"] {
   transition: background-color var(--delay), color var(--delay), text-shadow var(--delay);
 }
 
-input[type="button"]:hover {
+button:hover {
   background-color: var(--color-border);
 }
 
-input[type="button"]:active {
-  background-color: #d55;
+button:active {
+  background-color: #d55 !important;
 }
 
-input[type="button"]:disabled {
+button:focus {
+  background-color: #59b;
+}
+
+button:disabled {
   background-color: #d93;
   color: #000;
   text-shadow: none;
@@ -412,7 +428,7 @@ input[type="checkbox"]:checked::before {
 code {
   flex-shrink: 0;
   width: var(--code-width);
-  height: calc(100vh - var(--logo-size) - var(--padding) * 3 - var(--border) * 2);
+  height: calc(var(--content-height) - var(--border) * 2);
   border: var(--border) solid var(--color-border);
   border-radius: var(--radius);
   font: bold var(--font-size) / var(--font-size) "code";
@@ -500,75 +516,75 @@ code > div {
 }
 
 .var0 {
-  background-color: hsl(0 var(--var-sat) 55%);
+  background-color: oklch(var(--color-var) 0);
 }
 
 .var1 {
-  background-color: hsl(20 var(--var-sat) 55%);
+  background-color: oklch(var(--color-var) 20);
 }
 
 .var2 {
-  background-color: hsl(40 var(--var-sat) 50%);
+  background-color: oklch(var(--color-var) 40);
 }
 
 .var3 {
-  background-color: hsl(60 var(--var-sat) 40%);
+  background-color: oklch(var(--color-var) 60);
 }
 
 .var4 {
-  background-color: hsl(80 var(--var-sat) 40%);
+  background-color: oklch(var(--color-var) 80);
 }
 
 .var5 {
-  background-color: hsl(100 var(--var-sat) 40%);
+  background-color: oklch(var(--color-var) 100);
 }
 
 .var6 {
-  background-color: hsl(120 var(--var-sat) 40%);
+  background-color: oklch(var(--color-var) 120);
 }
 
 .var7 {
-  background-color: hsl(140 var(--var-sat) 40%);
+  background-color: oklch(var(--color-var) 140);
 }
 
 .var8 {
-  background-color: hsl(160 var(--var-sat) 40%);
+  background-color: oklch(var(--color-var) 160);
 }
 
 .var9 {
-  background-color: hsl(180 var(--var-sat) 40%);
+  background-color: oklch(var(--color-var) 180);
 }
 
 .var10 {
-  background-color: hsl(200 var(--var-sat) 50%);
+  background-color: oklch(var(--color-var) 200);
 }
 
 .var11 {
-  background-color: hsl(220 var(--var-sat) 55%);
+  background-color: oklch(var(--color-var) 220);
 }
 
 .var12 {
-  background-color: hsl(240 var(--var-sat) 60%);
+  background-color: oklch(var(--color-var) 240);
 }
 
 .var13 {
-  background-color: hsl(260 var(--var-sat) 60%);
+  background-color: oklch(var(--color-var) 260);
 }
 
 .var14 {
-  background-color: hsl(280 var(--var-sat) 55%);
+  background-color: oklch(var(--color-var) 280);
 }
 
 .var15 {
-  background-color: hsl(300 var(--var-sat) 55%);
+  background-color: oklch(var(--color-var) 300);
 }
 
 .var16 {
-  background-color: hsl(320 var(--var-sat) 55%);
+  background-color: oklch(var(--color-var) 320);
 }
 
 .var17 {
-  background-color: hsl(340 var(--var-sat) 55%);
+  background-color: oklch(var(--color-var) 340);
 }
 
 .sy1 {
