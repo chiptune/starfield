@@ -207,7 +207,7 @@ a::before {
   background: linear-gradient(
     #124,
     #c48 20%,
-    #e80 25%,
+    #680 25%,
     #fc8 30%,
     #fff 34%,
     #324 35%,
@@ -232,7 +232,7 @@ a::before {
 #cute_star {
   width: 32px;
   height: 32px;
-  margin: -4px 0px -4px 2px;
+  margin: -4px 0px -4px 0px;
 }
 
 #credits {
@@ -311,8 +311,8 @@ a::before {
   flex-direction: column;
   height: calc(var(--slider-height) * var(--var-count) + var(--padding));
   align-self: center;
-  min-width: 50%;
-  max-width: 50%;
+  min-width: 62.5%;
+  max-width: 62.5%;
 }
 
 #steps {
@@ -431,7 +431,7 @@ code {
   height: calc(var(--content-height) - var(--border) * 2);
   border: var(--border) solid var(--color-border);
   border-radius: var(--radius);
-  font: bold var(--font-size) / var(--font-size) "code";
+  font: 500 var(--font-size) / var(--font-size) "code";
   font-variant-ligatures: none;
   letter-spacing: 0.25px;
   white-space: pre;
