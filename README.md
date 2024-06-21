@@ -3,4 +3,4 @@ An interactive tutorial to learn how to code a nice starfield with a few lines o
 
 ![cute star](http://lol.pm/starfield/img/cute_star.png)
 
-![screenshot](http://lol.pm/starfield/img/screenshot.png?version=2)
+![screenshot](http://lol.pm/starfield/img/screenshot.png)
