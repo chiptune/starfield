@@ -1,8 +1,6 @@
 :root {
   user-select: none;
   color-scheme: only dark;
-  /* constants */
-  --var-count: 15;
   /* global variables */
   --font-size: 14px;
   --margin: 4px;
@@ -19,7 +17,7 @@
   --slider-var-width: 56px;
   --config-margin: 2px;
   --var-radius: 4px;
-  --code-width: 432px;
+  --code-width: 424px;
   --code-line-height: 18px;
   --logo-size: 42px;
   --delay: 0.5s;
@@ -159,6 +157,7 @@ a {
   color: #599;
   text-decoration: none;
   cursor: pointer;
+  transition: color var(--delay), text-shadow var(--delay);
 }
 
 a:hover {
@@ -206,13 +205,13 @@ a::before {
   text-shadow: none;
   background: linear-gradient(
     #124,
-    #c48 20%,
-    #680 25%,
-    #fc8 30%,
-    #fff 34%,
-    #324 35%,
-    #448 45%,
-    #48c 60%,
+    #c48 18%,
+    #e80 24%,
+    #fc8 28%,
+    #fff 31%,
+    #324 33%,
+    #448 48%,
+    #48c 56%,
     var(--color-border)
   );
   background-clip: text;
@@ -222,7 +221,7 @@ a::before {
 #subtitle {
   width: fit-content;
   font-size: 16px;
-  line-height: 16px;
+  line-height: 18px;
   letter-spacing: -0.2px;
   text-transform: uppercase;
   color: var(--color-border);
@@ -236,16 +235,22 @@ a::before {
 }
 
 #credits {
+  display: flex;
+  flex-direction: column;
+  row-gap: 5px;
+  align-items: end;
+  min-height: var(--logo-size);
   text-transform: uppercase;
-  text-align: right;
   text-wrap: nowrap;
+  line-height: 80%;
   color: #579;
+  overflow: hidden;
 }
 
 #version {
-  align-self: flex-end;
   font: var(--font-size) / var(--font-size) "code";
   text-transform: uppercase;
+  line-height: 75%;
   letter-spacing: 0.25px;
   color: #bbb;
   text-shadow: 0 0 2px var(--color-text-shadow);
@@ -254,7 +259,6 @@ a::before {
 #content {
   display: grid;
   grid-template-columns: min-content minmax(64px, auto) calc(var(--code-width) + var(--border) * 2);
-  column-gap: var(--padding);
   height: var(--content-height);
   overflow: hidden;
 }
@@ -263,7 +267,23 @@ a::before {
   display: flex;
   flex-direction: column;
   row-gap: var(--padding);
-  height: var(--content-height);
+  width: fit-content;
+  height: calc(var(--content-height) - var(--border));
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#menu::-webkit-scrollbar:vertical,
+#variables::-webkit-scrollbar:vertical {
+  background-color: var(--color-background);
+  width: var(--scrollbar-size);
+}
+
+#menu::-webkit-scrollbar-thumb:vertical,
+#variables::-webkit-scrollbar-thumb:vertical {
+  background-color: var(--color-background-alt);
+  border-radius: calc(var(--scrollbar-size) / 2);
+  border: calc(var(--padding) / 2) solid var(--color-background);
 }
 
 #options,
@@ -298,10 +318,11 @@ a::before {
   flex-direction: column;
   row-gap: var(--padding);
   width: fit-content;
+  height: var(--content-height);
 }
 
 #starfield {
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) * 1.25);
   cursor: crosshair;
   z-index: 2;
 }
@@ -309,10 +330,11 @@ a::before {
 #variables {
   display: flex;
   flex-direction: column;
-  height: calc(var(--slider-height) * var(--var-count) + var(--padding));
   align-self: center;
   min-width: 62.5%;
   max-width: 62.5%;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #steps {
@@ -428,7 +450,7 @@ input[type="checkbox"]:checked::before {
 code {
   flex-shrink: 0;
   width: var(--code-width);
-  height: calc(var(--content-height) - var(--border) * 2);
+  height: calc(var(--content-height) - var(--border) * 3);
   border: var(--border) solid var(--color-border);
   border-radius: var(--radius);
   font: 500 var(--font-size) / var(--font-size) "code";
@@ -629,6 +651,14 @@ code > div {
 
 .line:hover .op {
   color: #0008;
+}
+
+.str {
+  color: #5bb;
+}
+
+.line:hover .str {
+  color: #fffc;
 }
 
 .hl1 {

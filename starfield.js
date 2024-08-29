@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = [0, 2, 2];
+const VERSION = [0, 2, 3];
 
 /* DOM manipulation shortcuts */
 const _i = (id) => document.getElementById(String(id));
@@ -12,16 +12,20 @@ const _r = (e) => (e ? e.parentNode.removeChild(e) : undefined);
 const NBSP = "\u00A0";
 
 /* math functions */
-const PHI = (1 + Math.sqrt(5)) / 2; /* golden ratio */
+const PI = Math.PI; /* 180° in radians */
+const HALF_PI = Math.PI / 2; /* 90° in radians */
+const TWO_PI = Math.PI * 2; /* 360° in radians */
+const PHI = (Math.sqrt(5) + 1) / 2; /* golden ratio */
+const EULER = Math.E;
 
 const clamp = (n, min, max) => Math.max(min, Math.min(n, max));
 const lerp = (n, min, max) => min + n * (max - min);
 const normalize = (n, min, max) => (n - min) / (max - min);
 const lcg = () => {
   "use strict";
-  const LCG_MUL = 8121; // multiplier
-  const LCG_INC = 28411; // increment
-  const LCG_MOD = 134456; // modulus (2 ** 3 * 7 ** 5)
+  const LCG_MUL = 255; // multiplier
+  const LCG_INC = EULER; // increment
+  const LCG_MOD = PHI; // modulus
   seed = (LCG_MUL * seed + LCG_INC) % LCG_MOD;
   return seed / LCG_MOD;
 };
@@ -68,18 +72,18 @@ class Starfield {
   vars = [
     ["_nb", "number", 0, 4096, 8, 2048],
     ["_s", "size", 0.01, 1, 0.01, 0.5],
-    ["_w", "space", 8, this.SPACE * 2, 1, (this.SPACE / 4) * 5],
-    ["_fp", "far_p", 8, this.SPACE, 1, this.SPACE],
-    ["_np", "near_p", 1, this.SPACE, 1, 1],
+    ["_w", "space", 8, this.SPACE * 2, 1, (this.SPACE / 4) * 6],
+    ["_fp", "far_p", 1, this.SPACE * 2, 1, this.SPACE],
+    ["_np", "near_p", 1, this.SPACE * 2, 1, 1],
     ["_f", "focale", 1, this.SPACE * 2, 1, this.SPACE],
     ["_cl", "light", 0.01, 4, 0.01, 2],
-    ["_mo", "motion", -64, 64, 1, 8],
+    ["_mo", "motion", -64, 64, 0.1, 8],
     ["_o", "opacity", 0.01, 1, 0.01, 0.5],
-    ["_g", "gradient", 1, 24, 0.1, 12.5],
+    ["_g", "gradient", 1, 28, 0.1, 14],
     ["_hl", "halo", 0.01, 0.5, 0.01, 0.1],
     ["_dof", "dof", 0.01, 1, 0.01, 0.12],
     ["_cs", "color", 0.01, 1, 0.01, 0.5],
-    ["_cy", "cycle", 1, 360, 1, 90],
+    ["_cy", "cycle", 1, 360, 1, 120],
     ["_mi", "mirror", 0, 2, 0.01, 1],
     //["_ho", "horizon", 0, 32, 1, 16],
   ];
@@ -89,15 +93,14 @@ class Starfield {
     ["depth", [3, 4], [6, 17], [1]],
     ["focale", [5], [6, 8]],
     ["light", [6], [7, 8], [16]],
-    ["sorting", null, [[15, 22]], [4]],
     ["motion", [7, 8], [1, [13, 16], [19, 28]], [4]],
     ["gradient", [9, 10], [[12, 21]]],
     ["dof", [11], [[12, 15]]],
     ["blending", null, [[29, 36]], [1]],
-    ["color", [12, 13], [8, 9, 24, 25, [31, 34], 46]],
+    ["color", [12, 13], [8, 9, 24, 25, [31, 34], 47]],
     ["spikes", null, [[32, 60]], [24]],
     ["mirror", [14], [[25, 34]], [10]],
-    ["horizon", null, [[45, 55]]],
+    ["horizon", null, [[45, 55]], [1]],
   ];
   px = 0;
   py = 0;
@@ -127,13 +130,13 @@ class Starfield {
     this.seed = Number(this.url.get("seed")) || 0;
     this.vx = Number(this.url.get("x")) || 0;
     this.vy = Number(this.url.get("y")) || 0;
-    this.pause = Boolean(this.url.get("pause"));
-    this.nospikes = Boolean(this.url.get("nospikes"));
-    this.nocode = Boolean(this.url.get("nocode"));
-    this.novars = Boolean(this.url.get("novars"));
-    this.fullscreen = Boolean(this.url.get("fullscreen"));
-    this.crt = Boolean(this.url.get("crt"));
-    this.debug = Boolean(this.url.get("debug"));
+    this.pause = Boolean(this.url.get("pause") !== null);
+    this.nospikes = Boolean(this.url.get("nospikes") !== null);
+    this.nocode = Boolean(this.url.get("nocode") !== null);
+    this.novars = Boolean(this.url.get("novars") !== null);
+    this.fullscreen = Boolean(this.url.get("fullscreen") !== null);
+    this.crt = Boolean(this.url.get("crt") !== null);
+    this.debug = Boolean(this.url.get("debug") !== null);
     /* variables */
     this.vars.forEach((v) => {
       this[v[0]] = Number(this.url.get(v[0].slice(1)) || v[5]);
@@ -191,18 +194,28 @@ class Starfield {
   resize = () => {
     const style = getComputedStyle(document.body);
     const padding = parseInt(style.getPropertyValue("--padding"));
+    const slider = parseInt(style.getPropertyValue("--slider-height"));
     const content = _i("content");
     const menu = _i("menu");
     const visual = _i("visual");
+    const variables = _i("variables");
     const code = _t("code")[0];
+    const menuScroll = Boolean(menu.scrollHeight > menu.clientHeight);
     if (this.fullscreen) {
       menu.style.display = "none";
       this.w = content.offsetWidth;
       this.h = content.offsetHeight;
     } else {
       menu.style.display = "flex";
-      this.w = content.offsetWidth - menu.offsetWidth - (this.nocode ? 0 : code.offsetWidth + padding) - padding;
-      this.h = content.offsetHeight - (this.novars ? 0 : _i("variables").offsetHeight);
+      this.w = content.offsetWidth - padding - menu.offsetWidth - (this.nocode ? 0 : code.offsetWidth + padding);
+      this.h = content.offsetHeight - (this.novars ? 0 : slider * this.vars.length + padding);
+      variables.style.height = `${slider * this.vars.length + padding}px`;
+      if (menuScroll) {
+        this.w += padding;
+        menu.style.marginRight = "0px";
+      } else {
+        menu.style.marginRight = `${padding}px`;
+      }
     }
     this.ox = this.w / 2 + Number(this.url.get("ox") || 0);
     this.oy = this.h / 2 - Number(this.url.get("oy") || 0);
@@ -210,8 +223,8 @@ class Starfield {
     this.dpr = window.devicePixelRatio;
     this.cvs.width = this.w * this.dpr;
     this.cvs.height = this.h * this.dpr;
-    this.cvs.style.width = this.w + "px";
-    this.cvs.style.height = this.h + "px";
+    this.cvs.style.width = `${this.w}px`;
+    this.cvs.style.height = `${this.h}px`;
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(this.dpr, this.dpr);
     this.ctx.translate(this.ox, this.oy);
@@ -393,7 +406,7 @@ class Starfield {
     _i("motion").checked = !this.pause;
     this.set_url();
     if (this.pause) {
-      this.single_frame();
+      this.stop();
     } else {
       this.start();
     }
@@ -413,6 +426,7 @@ class Starfield {
     this.resize();
     this.set_url();
     this.single_frame();
+    if (!sfo.nocode) this.code2text();
   };
 
   set_novars = (state) => {
@@ -457,13 +471,13 @@ class Starfield {
       this.oy !== this.h / 2 ? "oy=" + -(this.oy - this.h / 2) : null, // Y up!
       Math.round(this.distance) !== this.DISTANCE ? "distance=" + Math.round(this.distance) : null,
       this.seed !== 0 ? `seed=${this.seed}` : null,
-      this.pause ? "pause=true" : null,
-      this.nospikes ? "nospikes=true" : null,
-      this.nocode ? "nocode=true" : null,
-      this.novars ? "novars=true" : null,
-      this.fullscreen ? "fullscreen=true" : null,
-      this.crt ? "crt=true" : null,
-      this.debug ? "debug=true" : null,
+      this.pause ? "pause" : null,
+      this.nospikes ? "nospikes" : null,
+      this.nocode ? "nocode" : null,
+      this.novars ? "novars" : null,
+      this.fullscreen ? "fullscreen" : null,
+      this.crt ? "crt" : null,
+      this.debug ? "debug" : null,
     ];
     params = params.filter((p) => p !== null);
     history.replaceState({ data: "" }, title, this.root + (params.length > 0 ? "?" : "") + params.join("&"));
@@ -485,15 +499,16 @@ class Starfield {
     /* scanline */
     const dot = 1;
     this.octx.setLineDash([0, dot * 3]);
-    this.octx.lineWidth = dot * 1.2;
-    this.crt_rgb(dot, 0.4, 1);
+    //this.octx.lineWidth = dot * 0.8;
+    //this.crt_rgb(dot, 0.75, 0.2, 0, 1);
     this.octx.lineWidth = dot * 0.8;
-    this.crt_rgb(dot, 0.9, 1);
+    this.crt_rgb(dot, 0.8, 0.2, 0, 1);
   };
 
-  crt_rgb = (dot, c, alpha) => {
+  crt_rgb = (dot, l, c, h, a) => {
+    const r = dot;
     /* R */
-    this.octx.strokeStyle = `color(display-p3 ${c} ${c / 4} ${c / 4} / ${alpha})`;
+    this.octx.strokeStyle = `oklch(${l} ${c} ${h} / ${a})`;
     let y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -501,10 +516,10 @@ class Starfield {
       this.octx.lineTo(this.w, y);
       this.octx.lineDashOffset = i % 2 === 0 ? 0 : dot * 1.5;
       this.octx.stroke();
-      y += dot;
+      y += r;
     }
     /* G */
-    this.octx.strokeStyle = `color(display-p3 ${c / 4} ${c} ${c / 4} / ${alpha})`;
+    this.octx.strokeStyle = `oklch(${l} ${c} ${360 / 3 + h} / ${a})`;
     y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -512,10 +527,10 @@ class Starfield {
       this.octx.lineTo(this.w, y);
       this.octx.lineDashOffset = dot + (i % 2 === 0 ? 0 : dot * 1.5);
       this.octx.stroke();
-      y += dot;
+      y += r;
     }
     /* B */
-    this.octx.strokeStyle = `color(display-p3 ${c / 4} ${c / 4} ${c} / ${alpha})`;
+    this.octx.strokeStyle = `oklch(${l} ${c} ${(360 / 3) * 2 + h} / ${a})`;
     y = dot / 2;
     for (let i = 0; i < this.h; i++) {
       this.octx.beginPath();
@@ -523,7 +538,7 @@ class Starfield {
       this.octx.lineTo(this.w, y);
       this.octx.lineDashOffset = dot * 2 + (i % 2 === 0 ? 0 : dot * 1.5);
       this.octx.stroke();
-      y += dot;
+      y += r;
     }
   };
 
@@ -551,7 +566,7 @@ class Starfield {
     this.rt[this.rti] = Math.min(1000 / (this.time - this.delta), this.rtmax);
     this.rti = (this.rti + 1) % this.rtc;
     cancelAnimationFrame(this.rid);
-    if (this.drag || this.drago || this.wheel || (this.step > 5 && !this.pause)) this.rid = requestAnimationFrame(fn);
+    if (this.drag || this.drago || this.wheel || (this.step > 4 && !this.pause)) this.rid = requestAnimationFrame(fn);
   };
 
   get_p = (x, y, z) => {
@@ -618,9 +633,13 @@ class Starfield {
     let x2, y2, r2, s2;
     let x = drag ? px : 0;
     let y = drag ? py : 0;
-    if (step === 1) {
-      x0 = drago ? px : vx;
-      y0 = drago ? py : vy;
+    if (step === 0) {
+      x0 = vx + x;
+      y0 = vy + y;
+      x1 = vx + x - _w / 4 - m;
+      y1 = vy + y - _w / 4 - m;
+      s1 = _w / 2 + m * 2;
+    } else if (step === 1) {
       x0 = vx + x;
       y0 = vy + y;
       x1 = vx + x - _w / 2 - m;
@@ -662,61 +681,52 @@ class Starfield {
     ctx.setLineDash([]);
     ctx.strokeStyle = "#5c0";
     ctx.fillStyle = "#5c0";
-    if (step === 0) {
-      //ctx.fillText('HEY!', 48, -40);
-    } else if (step === 1) {
-      ctx.strokeRect(x1, y1, s1, s1);
-      ctx.fillText(_w + "×" + _w, x1 + s1 / 2, y1 - 5);
-    } else {
-      ctx.beginPath();
-      ctx.rect(x1, y1, s1, s1);
-      ctx.rect(x2, y2, s2, s2);
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.moveTo(x1 + s1, y1);
-      ctx.lineTo(x2 + s2, y2);
-      ctx.moveTo(x1 + s1, y1 + s1);
-      ctx.lineTo(x2 + s2, y2 + s2);
-      ctx.moveTo(x1, y1 + s1);
-      ctx.lineTo(x2, y2 + s2);
-      ctx.stroke();
-      ctx.fillText(_w + "×" + _w + "×" + (_fp - _np), x1 + s1 / 2, y1 - 4);
-    }
-    if (step > 1) {
-      ctx.beginPath();
-      ctx.moveTo(x0 - m, y0);
-      ctx.lineTo(x0 + m, y0);
-      ctx.moveTo(x0, y0 - m);
-      ctx.lineTo(x0, y0 + m);
-      ctx.stroke();
-      ctx.lineDashOffset = 2;
-      ctx.setLineDash([2, 8]);
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(x1 + s1 / 2, y1 + s1 / 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.arc(x1 + s1 / 2, y1 + s1 / 2, (_w / 128) * r1, 0, CIRCLE);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, (_w / 128) * r2, 0, CIRCLE);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(x2 + s2 / 2, y2 + s2 / 2, 2, 0, CIRCLE);
-      ctx.stroke();
-      ctx.lineDashOffset = 8;
-      ctx.setLineDash([8, 8]);
-      ctx.beginPath();
-      ctx.moveTo(x1 + s1 / 2, y1 + s1 / 2);
-      ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
+    ctx.beginPath();
+    ctx.rect(x1, y1, s1, s1);
+    ctx.rect(x2, y2, s2, s2);
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.moveTo(x1 + s1, y1);
+    ctx.lineTo(x2 + s2, y2);
+    ctx.moveTo(x1 + s1, y1 + s1);
+    ctx.lineTo(x2 + s2, y2 + s2);
+    ctx.moveTo(x1, y1 + s1);
+    ctx.lineTo(x2, y2 + s2);
+    ctx.stroke();
+    ctx.fillText(`${_w}×${_w}${step > 0 ? "×" + (_fp - _np) : ""}`, x1 + s1 / 2, y1 - 4);
+    ctx.beginPath();
+    ctx.moveTo(x0 - 5, y0);
+    ctx.lineTo(x0 + 5, y0);
+    ctx.moveTo(x0, y0 - 5);
+    ctx.lineTo(x0, y0 + 5);
+    ctx.stroke();
+    ctx.lineDashOffset = 2;
+    ctx.setLineDash([2, 8]);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1 + s1 / 2, y1 + s1 / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(x1 + s1 / 2, y1 + s1 / 2, 3, 0, TWO_PI);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x2 + s2 / 2, y2 + s2 / 2, 6, 0, TWO_PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x2 + s2 / 2, y2 + s2 / 2, 3, 0, TWO_PI);
+    ctx.fill();
+    ctx.lineDashOffset = 8;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(x1 + s1 / 2, y1 + s1 / 2);
+    ctx.lineTo(x2 + s2 / 2, y2 + s2 / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
     /* origin */
     x = Math.round(ox - w / 2 + (drago ? px : 0));
     y = Math.round(oy - h / 2 + (drago ? py : 0));
-    ctx.fillText(x + "×" + -y, x0, y0 + 16);
+    ctx.fillText(x + "×" + -y, x0, y0 + 18);
     /* depth */
     if (step > 7) {
       x = drag ? px : 0;
@@ -854,9 +864,9 @@ class Starfield {
       this.range_color(range);
     }
     window.seed = this.seed;
-    step10_init();
+    step9_init();
     this.depth = this._fp - this._np;
-    this.code2text();
+    if (!sfo.nocode) this.code2text();
     this.start();
   };
 
@@ -906,6 +916,9 @@ class Starfield {
     text = text.replaceAll("sfo.", "");
     text = text.replaceAll("vx + ", "");
     text = text.replaceAll("vy + ", "");
+    text.match(/"([^"]*)"/g).forEach((v) => {
+      text = text.replaceAll(v.slice(1, -1), `«str»${v.slice(1, -1)}¤`);
+    });
     ["(", ")", "[", "]", "{", "}"].forEach((v) => {
       text = text.replaceAll(v, `«sy1»${v}¤`);
     });
@@ -921,8 +934,8 @@ class Starfield {
     ["Math", "Float32Array", "requestAnimationFrame", "rgb", "hsl"].forEach((v) => {
       text = text.replaceAll(v, `«sy5»${v}¤`);
     });
-    ["ctx", "stars", "distance", "depth", "time", "delta"].forEach((v) => {
-      text = text.replaceAll(v, `«sy6»${v}¤`);
+    ["ctx", "stars", "distance", "depth", "time", "dof", "delta"].forEach((v) => {
+      text = text.replaceAll(RegExp(`(?<!_)${v}`, "g"), `«sy6»${v}¤`);
     });
     ["THRESHOLD", "CIRCLE"].forEach((v) => {
       text = text.replaceAll(v, `«sy7»${v}¤`);
@@ -1070,13 +1083,13 @@ const generate_logo = () => {
 
 const squircle = (ctx, x, y, w, h, r) => {
   ctx.beginPath();
-  ctx.arc(x + r, y + r, r, CIRCLE / 2, (CIRCLE / 4) * 3);
+  ctx.arc(x + r, y + r, r, PI, PI + HALF_PI);
   ctx.lineTo(x + w - r, y);
-  ctx.arc(x + w - r, y + r, r, (CIRCLE / 4) * 3, CIRCLE);
+  ctx.arc(x + w - r, y + r, r, PI + HALF_PI, TWO_PI);
   ctx.lineTo(x + w, y + h - r);
-  ctx.arc(x + w - r, y + h - r, r, 0, CIRCLE / 4);
+  ctx.arc(x + w - r, y + h - r, r, 0, HALF_PI);
   ctx.lineTo(x + r, y + h);
-  ctx.arc(x + r, y + h - r, r, CIRCLE / 4, CIRCLE / 2);
+  ctx.arc(x + r, y + h - r, r, HALF_PI, PI);
   ctx.closePath();
 };
 
@@ -1084,16 +1097,16 @@ const spike = (ctx, x, y, r, t) => {
   const sw = r * 0.4;
   const sr = sw - t;
   ctx.beginPath();
-  ctx.arc(x - sw, y - sw, sr, CIRCLE / 4, 0, true);
+  ctx.arc(x - sw, y - sw, sr, HALF_PI, 0, true);
   ctx.lineTo(x - t, y - r);
   ctx.lineTo(x + t, y - r);
-  ctx.arc(x + sw, y - sw, sr, CIRCLE / 2, CIRCLE / 4, true);
+  ctx.arc(x + sw, y - sw, sr, PI, HALF_PI, true);
   ctx.lineTo(x + r, y - t);
   ctx.lineTo(x + r, y + t);
-  ctx.arc(x + sw, y + sw, sr, -CIRCLE / 4, CIRCLE / 2, true);
+  ctx.arc(x + sw, y + sw, sr, -HALF_PI, PI, true);
   ctx.lineTo(x + t, y + r);
   ctx.lineTo(x - t, y + r);
-  ctx.arc(x - sw, y + sw, sr, 0, -CIRCLE / 4, true);
+  ctx.arc(x - sw, y + sw, sr, 0, -HALF_PI, true);
   ctx.lineTo(x - r, y + t);
   ctx.lineTo(x - r, y - t);
   ctx.closePath();
@@ -1121,19 +1134,19 @@ const generate_cute_star = (size, angle) => {
   const n = 5;
   const r1 = size * 0.5;
   const r2 = size * 0.34;
-  let a = -CIRCLE / 4 - CIRCLE / n / 2;
-  let b = CIRCLE / n / 7;
+  let a = -HALF_PI - PI / n;
+  let b = TWO_PI / n / 7;
   ctx.beginPath();
   ctx.lineTo(r2 * Math.cos(a), r2 * Math.sin(a));
   for (let i = 0; i < n; i++) {
-    a += CIRCLE / n / 2;
+    a += PI / n;
     const x1 = r1 * Math.cos(a);
     const y1 = r1 * Math.sin(a);
     const c1x = r1 * Math.cos(a - b);
     const c1y = r1 * Math.sin(a - b);
     const c2x = r1 * Math.cos(a + b);
     const c2y = r1 * Math.sin(a + b);
-    a += CIRCLE / n / 2;
+    a += PI / n;
     const x2 = r2 * Math.cos(a);
     const y2 = r2 * Math.sin(a);
     ctx.quadraticCurveTo(c1x, c1y, x1, y1);
@@ -1149,27 +1162,27 @@ const generate_cute_star = (size, angle) => {
   const lash = size * 0.05;
   const el = eye * 0.3;
   ctx.beginPath();
-  ctx.arc(-x, -y, eye, 0, CIRCLE);
+  ctx.arc(-x, -y, eye, 0, TWO_PI);
   ctx.moveTo(x + eye, y);
-  ctx.arc(x, -y, eye, 0, CIRCLE);
+  ctx.arc(x, -y, eye, 0, TWO_PI);
   ctx.fillStyle = "color(display-p3 0.4 0.2 0.6)";
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(-x - lash, -y - lash * 1.4, lash, CIRCLE / 4, CIRCLE / 4 + CIRCLE / 10);
+  ctx.arc(-x - lash, -y - lash * 1.4, lash, HALF_PI, HALF_PI + TWO_PI / 10);
   ctx.moveTo(x + lash, -y);
-  ctx.arc(x + lash, -y - lash * 1.4, lash, CIRCLE / 4, CIRCLE / 4 - CIRCLE / 10, true);
+  ctx.arc(x + lash, -y - lash * 1.4, lash, HALF_PI, HALF_PI - TWO_PI / 10, true);
   ctx.lineWidth = size * 0.04;
   ctx.strokeStyle = "color(display-p3 0.4 0.2 0.6)";
   ctx.stroke();
   ctx.beginPath();
-  ctx.arc(-x + el, -y - el, eye / 3, 0, CIRCLE);
+  ctx.arc(-x + el, -y - el, eye / 3, 0, TWO_PI);
   ctx.moveTo(x + eye, y);
-  ctx.arc(x + el, -y - el, eye / 3, 0, CIRCLE);
+  ctx.arc(x + el, -y - el, eye / 3, 0, TWO_PI);
   ctx.fillStyle = "color(display-p3 0.6 0.4 0.8)";
   ctx.fill();
   /* mouth */
   ctx.beginPath();
-  ctx.arc(0, size * 0.08, size * 0.06, 0, CIRCLE / 2);
+  ctx.arc(0, size * 0.08, size * 0.06, 0, PI);
   ctx.lineWidth = size * 0.04;
   ctx.strokeStyle = "#846";
   ctx.strokeStyle = "color(display-p3 0.6 0.2 0.4)";
@@ -1180,9 +1193,9 @@ const generate_cute_star = (size, angle) => {
   const blush1 = size * 0.11;
   const blush2 = size * 0.08;
   ctx.beginPath();
-  ctx.ellipse(-x, y, blush1, blush2, 0, 0, CIRCLE);
+  ctx.ellipse(-x, y, blush1, blush2, 0, 0, TWO_PI);
   ctx.moveTo(x + blush1, y);
-  ctx.ellipse(x, y, blush1, blush2, 0, 0, CIRCLE);
+  ctx.ellipse(x, y, blush1, blush2, 0, 0, TWO_PI);
   ctx.fillStyle = "color(display-p3 0.9 0.6 0.8)";
   ctx.fill();
   return canvas;
@@ -1199,7 +1212,7 @@ const init = () => {
   });
   generate_favicon();
   generate_logo();
-  _i("cute_star").src = generate_cute_star(64, -CIRCLE / 60).toDataURL();
+  _i("cute_star").src = generate_cute_star(64, -TWO_PI / 60).toDataURL();
   _i("version").textContent = `v${VERSION.join(".")}`;
   _i("root").style.visibility = "visible";
   window.sfo = new Starfield();
@@ -1209,9 +1222,9 @@ const init = () => {
 const reset = () => {
   sfo.reset();
   sfo.set_url();
-  sfo.code2text();
+  if (!sfo.nocode) sfo.code2text();
   seed = sfo.seed;
-  step10_init();
+  step9_init();
   sfo.single_frame();
 };
 
@@ -1219,7 +1232,7 @@ const center = () => {
   sfo.center();
   sfo.set_url();
   seed = sfo.seed;
-  step10_init();
+  step9_init();
   sfo.single_frame();
 };
 
@@ -1228,6 +1241,6 @@ const randomize = () => {
   sfo.distance = Math.random() * (360 / sfo._cy) * sfo.depth;
   sfo.set_url();
   seed = sfo.seed;
-  step10_init();
+  step9_init();
   sfo.single_frame();
 };
